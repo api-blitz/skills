@@ -7,5 +7,8 @@
   "repository": "https://github.com/api-blitz/skills",
   "license": "MIT",
   "keywords": ["blitz", "blitz-api", "gtm", "sales", "lead-generation", "outreach", "skills"],
-  "skills": []
+  "skills": [
+    "./skills/blitz/blitz-gtm-brainstorm",
+    "./skills/blitz/blitz-create-script"
+  ]
 }

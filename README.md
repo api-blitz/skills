@@ -34,7 +34,8 @@ See [`CLAUDE.md`](./CLAUDE.md) for the governance rules each bucket follows, and
 
 Skills that wrap [Blitz API](https://blitz-api.ai) directly — Waterfall ICP cascades, People Search, Company Search, enrichment, and integration recipes.
 
-<!-- Add entries here as skills land in `skills/blitz/`. -->
+- **[blitz-gtm-brainstorm](./skills/blitz/blitz-gtm-brainstorm/SKILL.md)** — interview a GTM goal into a validated, enum-checked Blitz brief (endpoint choice, ICP filters, enrichment, volume estimate).
+- **[blitz-create-script](./skills/blitz/blitz-create-script/SKILL.md)** — turn a GTM brief into a runnable, install-and-go Blitz SDK script with API-key safety, error handling, and pagination.
 
 ### GTM
 
