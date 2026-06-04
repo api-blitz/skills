@@ -1,6 +1,6 @@
 ---
 name: blitz-gtm-brainstorm
-description: Interviews the user about a go-to-market goal and produces a validated GTM brief: the motion, the Blitz endpoint choice (Find People, Waterfall ICP, Company Search, or Employee Finder), an ICP/account definition with case-sensitive enum-validated filters, an enrichment plan (email/phone), an output target, the language, and a volume estimate. Use when the user wants to find leads, build a prospect or account list, define an ICP, plan outreach sourcing, or scope a Blitz API search before writing code, or says "who should I target", "build me a lead list", or "plan a GTM motion". Produces gtm-brief.yaml and hands off to blitz-create-script.
+description: Interviews the user about a go-to-market goal and produces a validated GTM brief covering the motion, the Blitz endpoint choice (Find People, Waterfall ICP, Company Search, or Employee Finder), an ICP/account definition with case-sensitive enum-validated filters, an enrichment plan (email/phone), an output target, the language, and a volume estimate. Use when the user wants to find leads, build a prospect or account list, define an ICP, plan outreach sourcing, or scope a Blitz API search before writing code, or says "who should I target", "build me a lead list", or "plan a GTM motion". Produces gtm-brief.yaml and hands off to blitz-create-script.
 ---
 
 # Blitz GTM Brainstorm
