@@ -1,0 +1,15 @@
+{
+  "name": "blitz-api-skills",
+  "version": "0.1.0",
+  "description": "Agent skills for going to market with Blitz API — lead-finding scripts, outreach, content, analytics, lifecycle automation, and the engineering that powers them.",
+  "author": { "name": "Blitz API", "url": "https://blitz-api.ai" },
+  "homepage": "https://github.com/api-blitz/skills",
+  "repository": "https://github.com/api-blitz/skills",
+  "license": "MIT",
+  "keywords": ["blitz", "blitz-api", "gtm", "sales", "lead-generation", "outreach", "skills"],
+  "skills": [
+    "./skills/blitz/blitz-gtm-brainstorm",
+    "./skills/blitz/blitz-create-script",
+    "./skills/blitz/blitz-reviewer"
+  ]
+}
