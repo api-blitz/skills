@@ -9,7 +9,7 @@ brief_version: 1
 goal: "Reach Heads of Sales at US Series-B SaaS companies"   # the user's one-liner
 motion: new-business          # new-business | account-penetration | crm-enrichment | market-research
 endpoint: find-people         # find-people | waterfall-icp | company-search | employee-finder
-language: python              # python | typescript
+language: python              # python | typescript | javascript
 
 # --- Company-level filters (find-people, company-search) ---
 account:

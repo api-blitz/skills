@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Confirm the official Blitz SDK is installed and print its version.
 # Exit 0 + version when present; exit 1 + install hint when missing.
-# Usage: bash verify_sdk.sh <python|typescript>
+# Usage: bash verify_sdk.sh <python|typescript|javascript>   (TS and JS share blitz-api-js)
 set -uo pipefail
 
 LANG_ARG="${1:-}"
@@ -17,8 +17,9 @@ case "$LANG_ARG" in
     fi
     ;;
   typescript|ts|javascript|js)
-    if npm ls blitz-api-js >/dev/null 2>&1; then
-      npm ls blitz-api-js 2>/dev/null | grep blitz-api-js | head -1
+    npm_out="$(npm ls blitz-api-js 2>/dev/null)"
+    if printf '%s\n' "$npm_out" | grep -q 'blitz-api-js@'; then
+      printf '%s\n' "$npm_out" | grep 'blitz-api-js@' | head -1
     elif command -v bun >/dev/null 2>&1 && bun pm ls 2>/dev/null | grep -q blitz-api-js; then
       bun pm ls 2>/dev/null | grep blitz-api-js | head -1
     else
@@ -27,7 +28,7 @@ case "$LANG_ARG" in
     fi
     ;;
   *)
-    echo "usage: verify_sdk.sh <python|typescript>" >&2
+    echo "usage: verify_sdk.sh <python|typescript|javascript>" >&2
     exit 2
     ;;
 esac

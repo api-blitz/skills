@@ -79,7 +79,15 @@ print(f"Collected {len(people)} unique people across {len(SEGMENTS)} segments")
 #       ...
 ```
 
-## TypeScript — single population
+## TypeScript / JavaScript — single population
+
+The block below is **TypeScript** — save as `script.ts` and run under a TS runtime: `bun run
+script.ts`, or `npx tsx script.ts` without bun (bare `node script.ts` won't strip the types).
+
+For a **`javascript`** brief, respect that choice: save the same code as `script.mjs`, drop the
+three type annotations (`: Record<string, string>[]`, `(v: unknown)`, `new Map<string, any>()` →
+`[]`, `(v)`, `new Map()`), keep the ESM `import`s, and run `node script.mjs` (the `.mjs` extension
+is ESM with no `package.json` `"type"` needed) or `bun run script.mjs`.
 
 ```ts
 import { BlitzAPI } from "blitz-api-js";

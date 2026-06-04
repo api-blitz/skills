@@ -33,15 +33,20 @@ helpers from there (e.g. `bash <skill-dir>/scripts/detect_pm.sh`), not the user'
    lossy enum is filtering to tagged-only records — prefer the keyword backbone:
    `../blitz-gtm-brainstorm/references/strategy.md`.)
 
-3. **Detect the package manager.** `bash scripts/detect_pm.sh <python|typescript>` →
-   Python: `uv` → `poetry` → `pip` (+venv). JS: `bun` → `pnpm` → `yarn` → `npm`.
+3. **Detect the package manager.** `bash scripts/detect_pm.sh <python|typescript|javascript>` →
+   Python: `uv` → `poetry` → `pip` (+venv). JS/TS: `bun` → `pnpm` → `yarn` → `npm`. The `run`
+   command honors the brief's `language`: `typescript` runs via bun/tsx (`script.ts`), `javascript`
+   runs via bun/node (`script.mjs`). Pass the brief's `language` through — don't force TS on a JS brief.
 
 4. **Install and verify the SDK.** Install (`uv add blitz-api-py` / `bun add blitz-api-js` / pip /
-   npm), then `bash scripts/verify_sdk.sh <python|typescript>`. If install or import fails, show
+   npm), then `bash scripts/verify_sdk.sh <python|typescript|javascript>`. If install or import fails, show
    the exact error and the install command and **stop** — do NOT fall back to raw HTTP. A failed
    install is the signal to fix the environment, not to hand-roll the client.
 
-5. **Generate the script** from [references/script-templates.md](references/script-templates.md):
+5. **Generate the script** from [references/script-templates.md](references/script-templates.md)
+   in the brief's `language` — `python` (`script.py`), `typescript` (`script.ts`), or `javascript`
+   (`script.mjs`, the same template with the type annotations dropped). Respect the user's choice;
+   don't emit TypeScript for a `javascript` brief.
    - `volume.exceeds_ceiling: false` → **single-population** template (SDK auto-paginates).
    - `volume.exceeds_ceiling: true` → **partitioned** template: loop the `partition_plan`
      segments, collect all pages per segment, union, and **dedupe by `output.dedupe_key`**.
@@ -52,8 +57,9 @@ helpers from there (e.g. `bash <skill-dir>/scripts/detect_pm.sh`), not the user'
    Add a `/v2/account/key-info` preflight, and handle `found == false`, empty results, and the
    US-only phone caveat. See [references/error-handling.md](references/error-handling.md).
 
-7. **Tell the user how to run it** (`uv run script.py` / `bun run script.ts`), and which env vars
-   to set (`BLITZ_API_KEY`).
+7. **Tell the user how to run it** — Python: `uv run script.py`; TypeScript: `bun run script.ts`
+   (or `npx tsx script.ts` without bun); JavaScript: `bun run script.mjs` (or `node script.mjs`).
+   And which env vars to set (`BLITZ_API_KEY`).
 
 ## Rules
 
@@ -62,3 +68,5 @@ helpers from there (e.g. `bash <skill-dir>/scripts/detect_pm.sh`), not the user'
 - Never hardcode the API key; never commit `.env`.
 - Phone enrichment is US-only — guard non-US contacts before calling it.
 - Honor the brief: if `exceeds_ceiling` is true, the partitioned template is mandatory.
+- Honor the brief's `language`. A `javascript` brief gets runnable JS (`script.mjs`, run with
+  `node`/`bun`) — don't force TypeScript or a TS runtime on it.

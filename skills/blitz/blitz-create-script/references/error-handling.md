@@ -14,7 +14,11 @@
   leads.csv
   ```
 - Python: `uv run --env-file .env script.py`, or `python-dotenv`, or export the var.
-  JS: `bun --env-file=.env run script.ts`, or `node --env-file=.env script.js` (Node 20+).
+  TypeScript: `bun --env-file=.env run script.ts` (bun runs TS natively), or — without bun —
+  install `tsx` and run `node --env-file=.env --import tsx script.ts` (Node 20.6+); `npx tsx
+  script.ts` works for a quick run if the env is already exported.
+  JavaScript: `node --env-file=.env script.mjs` (Node 20.6+), or `bun --env-file=.env run
+  script.mjs` — no TS runtime needed.
 - The key goes in the `x-api-key` header (the SDK does this). Never call Blitz from browser /
   mobile client code — backend only.
 

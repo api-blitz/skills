@@ -16,7 +16,7 @@ work the steps below and output `gtm-brief.yaml`. Do not write code here — tha
 `blitz-create-script`'s job.
 
 `scripts/` and `references/` paths below are relative to this skill's own directory — run the
-helpers from there (e.g. `bash <skill-dir>/scripts/pull_enums.sh`), not the user's project root.
+helpers from there (e.g. `bash <skill-dir>/scripts/pull_enums.sh list`), not the user's project root.
 
 ## Workflow
 
@@ -37,8 +37,11 @@ helpers from there (e.g. `bash <skill-dir>/scripts/pull_enums.sh`), not the user
 3. **Validate every enum you *do* use — live.** Case-sensitive enums silently return 0 results on
    any typo (`"SaaS"` ≠ `"Software Development"`). For each `industry` / `job_level` /
    `job_function` / `employee_range` / `sales_region` / `country_code` / `type` value in the brief,
-   run `bash scripts/pull_enums.sh` and match it EXACTLY; fix any miss with the user. If offline,
-   fall back to [references/enums-snapshot.md](references/enums-snapshot.md). Set
+   confirm an EXACT match with `bash scripts/pull_enums.sh search <enum> "<value>"` (e.g.
+   `search industry "health"`; `list` shows all enums, `get <enum>` dumps the small ones). Fix any
+   miss with the user. The script pulls live from the Blitz OpenAPI spec — the same source the SDK
+   generates its enums from; if offline it falls back to the committed
+   [references/enums.json](references/enums.json) (may be stale — re-verify). Set
    `enums_verified: true` once the enums you use all match (a keyword-only search that uses no enums
    is trivially verified). This guards typos — it is **not** a nudge to lean on enums; prefer the
    keyword backbone from step 2.
@@ -51,8 +54,8 @@ helpers from there (e.g. `bash <skill-dir>/scripts/pull_enums.sh`), not the user
    [references/volume-and-partition.md](references/volume-and-partition.md).
 
 5. **Enrichment, output, language.** `email` (any leads plan), `phone` (US-only — warn if the
-   targets are not US), reverse lookups. Output: `csv` / `json` / `stdout`. Language: `python`
-   or `typescript`.
+   targets are not US), reverse lookups. Output: `csv` / `json` / `stdout`. Language: `python`,
+   `typescript`, or `javascript` — record the user's choice as-is (don't default a JS user to TS).
 
 6. **Emit the brief.** Write `gtm-brief.yaml` per
    [references/gtm-brief-schema.md](references/gtm-brief-schema.md) and offer to save it in the

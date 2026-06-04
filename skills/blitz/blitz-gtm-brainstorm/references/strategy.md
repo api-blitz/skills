@@ -16,7 +16,7 @@ fuzzy, **ask the user** rather than guessing; an over-tight or over-loose ICP wa
 There are **two** ways a search underperforms, and only the first is obvious:
 
 1. **Enum typo → hard 0 results.** Case-sensitive values silently return nothing on any mismatch
-   (`"vp"` ≠ `"VP"`). Covered in [enums-snapshot.md](enums-snapshot.md).
+   (`"vp"` ≠ `"VP"`). Pull and search them with [../scripts/pull_enums.sh](../scripts/pull_enums.sh).
 2. **Correct-but-sparse field → silent recall collapse.** A perfectly-spelled `industry` or
    `job_level` only matches records *tagged* with it — and not every company has an industry
    linked, nor is every person tagged `VP`. So a "clean" search can quietly return a *fraction* of
