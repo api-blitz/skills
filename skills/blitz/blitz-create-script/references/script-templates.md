@@ -160,6 +160,8 @@ console.log(`Collected ${people.length} unique people across ${SEGMENTS.length} 
 - **Waterfall ICP** → `client.search.waterfall_icp({ company_linkedin_url, cascade, max_results })`;
   iterate a list of accounts, one call each; each result item exposes `.person`, `.icp`, `.ranking`.
 - **JSON output** → collect `rows`/`people` and `json.dump` / `JSON.stringify` instead of CSV.
-- Enriching every record makes one paid API call per record; the SDK throttles to `rate_limit_rps`.
-  Dedupe on `linkedin_url` and apply any ICP cleanup *before* enriching, and on very large runs
-  enrich only what you'll actually contact (cap with `max_items` / `auto_paging_iter`).
+- Enriching every record makes one paid API call per record; the SDK throttles to `rate_limit_rps`
+  per client. Rate limits are per endpoint, so when you enrich both `/email` and `/phone`, a separate
+  client per endpoint lets each run at its own RPS concurrently instead of sharing one budget. Dedupe
+  on `linkedin_url` and apply any ICP cleanup *before* enriching, and on very large runs enrich only
+  what you'll actually contact (cap with `max_items` / `auto_paging_iter`).

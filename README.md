@@ -36,7 +36,7 @@ Skills that wrap [Blitz API](https://blitz-api.ai) directly — Waterfall ICP ca
 
 - **[blitz-gtm-brainstorm](./skills/blitz/blitz-gtm-brainstorm/SKILL.md)** — interview a GTM goal into a validated, enum-checked Blitz brief (endpoint choice, ICP filters, enrichment, volume estimate).
 - **[blitz-create-script](./skills/blitz/blitz-create-script/SKILL.md)** — turn a GTM brief into a runnable, install-and-go Blitz SDK script with API-key safety, error handling, and pagination.
-- **[blitz-reviewer](./skills/blitz/blitz-reviewer/SKILL.md)** — review a Blitz integration before you run it: MCP installed, SDK & skills current, correct methods/bodies/enums in your code, and API-key RPS/credits.
+- **[blitz-reviewer](./skills/blitz/blitz-reviewer/SKILL.md)** — review a Blitz integration before you run it: MCP installed, SDK & skills current, correct methods/bodies/enums in your code, and per-endpoint RPS/credits.
 
 ### GTM
 

@@ -9,8 +9,8 @@ Turn a GTM brief into a runnable Blitz script that uses the **official Blitz SDK
 (`blitz-api-py` / `blitz-api-js`), installs it with the best package manager, and ships with
 API-key safety, baseline error handling, and correct pagination.
 
-The SDK handles pagination, client-side rate-limiting, and 429/5xx retries for you. **Never emit
-raw `fetch`/`requests`** — that re-introduces every bug the SDK exists to remove.
+The SDK handles pagination, per-endpoint client-side rate-limiting, and 429/5xx retries for you.
+**Never emit raw `fetch`/`requests`** — that re-introduces every bug the SDK exists to remove.
 
 ## Quick start
 

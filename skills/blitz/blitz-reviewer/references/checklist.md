@@ -19,7 +19,7 @@ checklist, then work the remediation queue with the user. Severity legend:
 | 4 | **SDK methods** | call maps to a real `.paths` entry | — | unknown/renamed method, or raw HTTP to `api.blitz-api.ai` | scan → ask MCP → [code-audit.md](code-audit.md) |
 | 5 | **Request bodies** | keys match the MCP schema | extra/ignored keys | wrong/camelCase key, wrong type | MCP OpenAPI (live), else snapshot → [code-audit.md](code-audit.md) |
 | 6 | **Enum values** | all values exist, exact case | lossy/sparse enum filtering recall | miscased/typo'd value (silent zero) | MCP normalization pages (live), else snapshot → [code-audit.md](code-audit.md) |
-| 7 | **API key + RPS** | valid, RPS not throttled below allowed | code `rate_limit_rps` < allowed, low credits, or higher tier would help | invalid/expired key, missing required `allowed_apis` | `check_key.sh` → [key-and-rps.md](key-and-rps.md) |
+| 7 | **API key + RPS** | valid, per-endpoint RPS not under-used | code `rate_limit_rps` < an endpoint's allowed, one client pooled across endpoints called concurrently, low credits, or higher tier would help | invalid/expired key, missing required `allowed_apis` | `check_key.sh` → [key-and-rps.md](key-and-rps.md) |
 | 8 | **Key safety** | key from env, `.env` gitignored | `.env` present but not gitignored | hardcoded key in source | scan → [code-audit.md](code-audit.md) |
 | 9 | **Pagination** | uses SDK auto-paging / `auto_paging_iter` | manual page loop that should auto-page | reads only page 1 of a large population | scan → [code-audit.md](code-audit.md) |
 
@@ -35,7 +35,7 @@ MCP: <installed | MISSING> · SDK: blitz-api-py <x> (latest <y>) · Skills: <loc
   ✗ 3 SDK outdated — blitz-api-py 1.2.0 < 1.4.1
   ✗ 5 wrong body key — src/leads.py:42 uses `jobLevel` (snake_case: `job_level`)
   ✗ 6 miscased enum — src/leads.py:43 "vp" is not a JobLevel value (use "VP")
-  ⚠ 7 RPS throttled — client rate_limit_rps=2 but key allows 10
+  ⚠ 7 RPS pooled — one client at rate_limit_rps=5 serves /email + /phone; give each its own (5+5)
   ⚠ 8 .env not gitignored
 
 Summary: 1 pass · 2 warn · 3 fail
@@ -59,7 +59,8 @@ Propose fixes one at a time; apply only on an explicit yes. Default remediations
 - **Wrong body key / enum** → correct in place against the live MCP schema, or
   `../../blitz-gtm-brainstorm/scripts/pull_enums.sh search <enum> "<value>"` (pulls live from the
   OpenAPI spec; snapshot fallback: that skill's `references/enums.json`).
-- **RPS throttled / credits / tier** → see [key-and-rps.md](key-and-rps.md); ask before any change.
+- **RPS under-used (throttled, or pooled across endpoints) / credits / tier** → see
+  [key-and-rps.md](key-and-rps.md); ask before any change.
 - **Hardcoded key** → move to `BLITZ_API_KEY` in `.env`, add `.env` to `.gitignore`, and tell the
   user to rotate the exposed key.
 

@@ -33,6 +33,12 @@ Pagination, client-side rate-limiting (`rate_limit_rps`, default ~5), and retrie
 network errors with backoff (`max_retries`, default 3). Do not re-implement these. Do not lower
 `max_retries` to 0.
 
+Rate limits are enforced **per endpoint**, and the SDK's limiter is **per client instance** — one
+client's `rate_limit_rps` caps total output across every endpoint it calls. For a job that hits two
+endpoints under load (e.g. `/enrichment/email` and `/enrichment/phone`), use a **separate client per
+endpoint** so each runs at its own per-endpoint limit concurrently instead of sharing one budget.
+One client is fine when the job calls a single endpoint, or when calls are sequential.
+
 ## Cases the generated script MUST handle
 | Case | How |
 |------|-----|

@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Read Blitz API key health — valid, remaining credits, allowed RPS, allowed APIs.
+# Read Blitz API key health — valid, remaining credits, allowed per-endpoint RPS, allowed APIs.
+# Rate limits are per endpoint (each endpoint has its own RPS ceiling), not one shared account pool;
+# max_requests_per_seconds is the allowed RPS that applies to each endpoint.
 # This is a FREE call (key-info): it spends no credits. Needs BLITZ_API_KEY in the env, plus
 # curl and jq. The response carries no secret, so its fields are safe to print.
 # Usage: BLITZ_API_KEY=sk_... bash check_key.sh
