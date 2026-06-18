@@ -14,6 +14,8 @@ from blitz_api import BlitzAPI          # AsyncBlitzAPI for async
 client = BlitzAPI()                     # reads BLITZ_API_KEY; or BlitzAPI(api_key="sk_...")
 # Tuning (the SDK already throttles + retries — keep these unless told otherwise):
 # BlitzAPI(max_retries=3, rate_limit_rps=5.0)   # rate_limit_rps=None to disable
+# Rate limits are per endpoint; the limiter is per client. For a multi-endpoint job under load,
+# use one client per endpoint so each runs at its own RPS (e.g. an email client + a phone client).
 ```
 
 Enums (optional; raw strings also accepted):
@@ -61,6 +63,7 @@ Install: `bun add blitz-api-js`  (or `npm install blitz-api-js`)
 import { BlitzAPI } from "blitz-api-js";          // CJS: const { BlitzAPI } = require("blitz-api-js")
 const client = new BlitzAPI();                    // reads BLITZ_API_KEY
 // const client = new BlitzAPI({ api_key: "sk_...", max_retries: 3, rate_limit_rps: 5, timeout: 30 });
+// Limits are per endpoint and the limiter is per client — give a multi-endpoint job one client per endpoint.
 ```
 
 Filters accept string unions (`"Software Development"`, `"VP"`). Optional helpers:
@@ -101,3 +104,5 @@ POST /v2/account/key-info  ->  { valid, remaining_credits, max_requests_per_seco
 ```
 Python: `client.account.key_info()` · JS: `client.account.key_info()` (mirrors the endpoint). Use
 it as a preflight to fail fast on a bad key, an exhausted plan, or an endpoint the plan lacks.
+`max_requests_per_seconds` is the allowed RPS **per endpoint** — each endpoint has its own ceiling,
+not a shared account pool.

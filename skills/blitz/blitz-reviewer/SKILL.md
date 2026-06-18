@@ -1,6 +1,6 @@
 ---
 name: blitz-reviewer
-description: Reviews a Blitz API integration against the live Blitz docs before you run it. Confirms the Blitz MCP is installed (and pushes to add it), checks the blitz-api SDK and the Blitz skills are on the latest version, scans your project for wrong SDK methods, malformed request bodies, and case-sensitive enum typos by validating each call against the MCP's OpenAPI specs and normalization pages, and reads your API key's rate limit and credits to flag throughput left on the table. Reports a pass/warn/fail checklist and applies each fix only after you confirm. Use when the user says "review my Blitz integration", "audit my Blitz code", "check my Blitz setup", "is my Blitz usage correct", "preflight my Blitz job", or before running a Blitz job at scale.
+description: Reviews a Blitz API integration against the live Blitz docs before you run it. Confirms the Blitz MCP is installed (and pushes to add it), checks the blitz-api SDK and the Blitz skills are on the latest version, scans your project for wrong SDK methods, malformed request bodies, and case-sensitive enum typos by validating each call against the MCP's OpenAPI specs and normalization pages, and reads your API key's per-endpoint rate limits and credits to flag throughput left on the table. Reports a pass/warn/fail checklist and applies each fix only after you confirm. Use when the user says "review my Blitz integration", "audit my Blitz code", "check my Blitz setup", "is my Blitz usage correct", "preflight my Blitz job", or before running a Blitz job at scale.
 ---
 
 # Blitz Reviewer
@@ -54,8 +54,10 @@ the MCP is unavailable — prefer the live MCP every time.
 
 5. **API key, RPS & credits.** Read key health via the SDK (`client.account.key_info()`) or
    `BLITZ_API_KEY=… bash scripts/check_key.sh`. Report `valid`, `remaining_credits`,
-   `max_requests_per_seconds`, and `allowed_apis`. If the code's `rate_limit_rps` is set **below**
-   the key's allowed RPS, flag the wasted throughput; ask before requesting any tier change. See
+   `max_requests_per_seconds`, and `allowed_apis`. Limits are **per endpoint**, not a shared account
+   pool: flag both a `rate_limit_rps` set **below** an endpoint's allowed RPS *and* a single shared
+   client throttling several endpoints that are called *concurrently* (give each its own client; a
+   sequential loop gains nothing from the split). Ask before requesting any tier change. See
    [references/key-and-rps.md](references/key-and-rps.md).
 
 6. **Report & remediate.** Present the pass/warn/fail checklist (format in
