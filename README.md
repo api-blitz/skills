@@ -18,6 +18,66 @@ npx skills@latest add api-blitz/skills
 
 3. You're ready to go.
 
+## Install by agent
+
+The skills.sh installer above works for Claude Code, Codex, Cursor, and other Agent Skills-compatible agents. The options below also add the [Blitz MCP server](#blitz-mcp-server).
+
+### Claude Code
+
+Install the plugin (skills + MCP server as one managed install). Inside Claude Code:
+
+```bash
+/plugin marketplace add api-blitz/skills
+/plugin install blitz-api-skills@blitz-api
+```
+
+Or from your shell:
+
+```bash
+claude plugin marketplace add api-blitz/skills
+claude plugin install blitz-api-skills@blitz-api
+```
+
+Then run `/mcp`, select **blitz-api**, and sign in with your Blitz account.
+
+### Grok
+
+```bash
+grok plugin install api-blitz/skills --trust
+```
+
+The first Blitz tool call opens OAuth in the browser.
+
+### Cursor
+
+Install the skills with the skills.sh installer above, and add the MCP server to `mcp.json` (Cmd/Ctrl + Shift + P → **Open MCP Settings**):
+
+```json
+{
+  "mcpServers": {
+    "blitz-api": {
+      "url": "https://api.blitz-api.ai/mcp"
+    }
+  }
+}
+```
+
+### Claude.ai and ChatGPT
+
+Add `https://api.blitz-api.ai/mcp` as a custom connector (remote MCP server) and sign in with your Blitz account. In Claude.ai: **"+"** → **Manage Connectors** → **Add custom Connector**.
+
+## Blitz MCP server
+
+The plugin ships the hosted Blitz MCP server, which gives your agent the live Blitz docs (`docs_*`) and API tools (`people_*`, `company_*`, `job_*`).
+
+| | |
+| --- | --- |
+| URL | `https://api.blitz-api.ai/mcp` |
+| Transport | HTTP |
+| Auth | OAuth (sign in with your Blitz account) — or an `x-api-key` header |
+
+The committed configs ([`.mcp.json`](./.mcp.json) for Claude Code and Grok, [`mcp.cursor.json`](./mcp.cursor.json) for Cursor) use OAuth and contain no secrets. If you prefer an API key, pass it as a header in your own local config and never commit it, for example `claude mcp add --transport http blitz-api https://api.blitz-api.ai/mcp --header "x-api-key: YOUR_API_KEY"`. Full per-agent setup: [Connect Your AI (MCP)](https://docs.blitz-api.ai/guide/integrations/MCP).
+
 ## Layout
 
 Skills live under `skills/`, grouped into buckets:

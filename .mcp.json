@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "blitz-api": {
+      "type": "http",
+      "url": "https://api.blitz-api.ai/mcp"
+    }
+  }
+}
