@@ -1,15 +1,13 @@
 {
   "name": "blitz-api-skills",
+  "displayName": "Blitz API Skills",
   "version": "0.2.0",
   "description": "Plan a Blitz lead search, generate the Python or JS script, and review it before you run it. Includes the hosted Blitz MCP server for live docs and API tools.",
-  "author": { "name": "Blitz API", "url": "https://blitz-api.ai" },
+  "author": { "name": "Blitz API" },
   "homepage": "https://github.com/api-blitz/skills",
   "repository": "https://github.com/api-blitz/skills",
   "license": "MIT",
   "keywords": ["blitz", "blitz-api", "gtm", "sales", "lead-generation", "enrichment", "icp", "mcp"],
-  "skills": [
-    "./skills/blitz/blitz-gtm-brainstorm",
-    "./skills/blitz/blitz-create-script",
-    "./skills/blitz/blitz-reviewer"
-  ]
+  "skills": ["./skills/blitz/", "./skills/gtm/", "./skills/productivity/"],
+  "mcpServers": "./mcp.cursor.json"
 }

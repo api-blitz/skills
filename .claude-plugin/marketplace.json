@@ -1,0 +1,22 @@
+{
+  "$schema": "https://code.claude.com/schemas/marketplace.json",
+  "name": "blitz-api",
+  "description": "Agent skills and the hosted MCP server for finding and enriching B2B leads with Blitz API.",
+  "owner": {
+    "name": "Blitz API",
+    "url": "https://blitz-api.ai"
+  },
+  "plugins": [
+    {
+      "name": "blitz-api-skills",
+      "source": "./",
+      "description": "Plan a Blitz lead search, generate the Python or JS script, and review it before you run it. Includes the hosted Blitz MCP server for live docs and API tools.",
+      "author": {
+        "name": "Blitz API",
+        "url": "https://blitz-api.ai"
+      },
+      "homepage": "https://github.com/api-blitz/skills",
+      "category": "productivity"
+    }
+  ]
+}
