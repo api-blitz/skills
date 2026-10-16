@@ -34,5 +34,5 @@ if [ "$found" -eq 1 ]; then
   echo "mcp=installed"
 else
   echo "mcp=missing"
-  echo "hint=add the Blitz HTTP MCP (url https://docs.blitz-api.ai/mcp) to your agent's MCP config, then restart. Per-agent steps: https://docs.blitz-api.ai/guide/integrations/MCP"
+  echo "hint=add the Blitz HTTP MCP (url https://api.blitz-api.ai/mcp; sign in with OAuth or send an x-api-key header) to your agent's MCP config, then restart. Per-agent steps: https://docs.blitz-api.ai/guide/integrations/MCP"
 fi

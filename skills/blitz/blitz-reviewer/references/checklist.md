@@ -13,7 +13,7 @@ checklist, then work the remediation queue with the user. Severity legend:
 
 | # | Check | Pass when | Warn when | Fail when | How |
 |---|-------|-----------|-----------|-----------|-----|
-| 1 | **Blitz MCP** | Blitz MCP connected | user declined after the push (note degraded confidence) | not installed and not yet pushed | own tools / `check_mcp.sh` → [mcp-setup.md](mcp-setup.md) |
+| 1 | **Blitz MCP** | Blitz MCP connected | user declined the recommendation (note degraded confidence) | not installed and not yet recommended | own tools / `check_mcp.sh` → [mcp-setup.md](mcp-setup.md) |
 | 2 | **Skills version** | local == latest | local behind latest | can't read local plugin.json | `check_skills.sh` |
 | 3 | **SDK version** | installed == latest | installed behind latest | not installed | `check_sdk.sh <python\|javascript>` |
 | 4 | **SDK methods** | call maps to a real `.paths` entry | — | unknown/renamed method, or raw HTTP to `api.blitz-api.ai` | scan → ask MCP → [code-audit.md](code-audit.md) |

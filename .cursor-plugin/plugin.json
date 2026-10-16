@@ -1,7 +1,7 @@
 {
   "name": "blitz-api-skills",
   "displayName": "Blitz API Skills",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Plan a Blitz lead search, generate the Python or JS script, and review it before you run it. Includes the hosted Blitz MCP server for live docs and API tools.",
   "author": { "name": "Blitz API" },
   "homepage": "https://github.com/api-blitz/skills",

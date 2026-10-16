@@ -1,6 +1,6 @@
 ---
 name: blitz-reviewer
-description: Reviews a Blitz API integration against the live Blitz docs before you run it. Confirms the Blitz MCP is installed (and pushes to add it), checks the blitz-api SDK and the Blitz skills are on the latest version, scans your project for wrong SDK methods, malformed request bodies, and case-sensitive enum typos by validating each call against the MCP's OpenAPI specs and normalization pages, and reads your API key's per-endpoint rate limits and credits to flag throughput left on the table. Reports a pass/warn/fail checklist and applies each fix only after you confirm. Use when the user says "review my Blitz integration", "audit my Blitz code", "check my Blitz setup", "is my Blitz usage correct", "preflight my Blitz job", or before running a Blitz job at scale.
+description: Reviews a Blitz API integration against the live Blitz docs before you run it. Confirms the Blitz MCP is installed (and offers to add it), checks the blitz-api SDK and the Blitz skills are on the latest version, scans your project for wrong SDK methods, malformed request bodies, and case-sensitive enum typos by validating each call against the MCP's OpenAPI specs and normalization pages, and reads your API key's per-endpoint rate limits and credits to flag throughput left on the table. Reports a pass/warn/fail checklist and applies each fix only after you confirm. Use when the user says "review my Blitz integration", "audit my Blitz code", "check my Blitz setup", "is my Blitz usage correct", "preflight my Blitz job", or before running a Blitz job at scale.
 ---
 
 # Blitz Reviewer
@@ -10,7 +10,7 @@ Audit a Blitz integration and report what's healthy, what's stale, and what's wr
 
 **The Blitz MCP is the source of truth.** Never judge a call against a memorized or bundled API
 spec — ask the MCP for the live endpoint, request body, and enum values and compare. That's why the
-MCP is checked first and pushed hard: it makes every other check accurate. Output is a
+MCP is checked first: it makes every other check accurate. Output is a
 pass/warn/fail checklist; nothing changes until the user confirms each fix.
 
 This is diagnosis, not a refactor. Run the read-only checks, collect findings into one report, then
@@ -29,13 +29,14 @@ the MCP is unavailable — prefer the live MCP every time.
 
 ## Workflow
 
-1. **MCP — required (check first).** Decide whether the Blitz MCP is connected: check whether you
-   (whichever agent you are) expose Blitz MCP tools (`search…blitz…`, `query_docs…blitz…`); if
-   unclear, run `bash scripts/check_mcp.sh`. **If it's missing, stop and push the user to install
-   it** — give the steps for *their* agent (Claude Code, Cursor, VS Code, Windsurf, Codex, claude.ai,
-   …), link https://docs.blitz-api.ai/guide/integrations/MCP, and offer to add it. It's what lets
-   checks 4–6 validate against the live schema. Only if the user declines, fall back to the snapshot
-   references and **flag the degraded confidence**. See [references/mcp-setup.md](references/mcp-setup.md).
+1. **MCP (check first).** Decide whether the Blitz MCP is connected: check whether you (whichever
+   agent you are) expose its tools (`docs_search`, `docs_read`, and the `people_*` / `company_*` /
+   `job_*` API tools); if unclear, run `bash scripts/check_mcp.sh`. **If it's missing, recommend
+   installing it before you continue** — it's what lets checks 4–6 validate against the live
+   schema. Give the steps for *their* agent (Claude Code, Cursor, VS Code, Windsurf, Codex,
+   claude.ai, …), link https://docs.blitz-api.ai/guide/integrations/MCP, and offer to add it. If the
+   user declines, fall back to the snapshot references and **flag the degraded confidence**. See
+   [references/mcp-setup.md](references/mcp-setup.md).
 
 2. **Skills up to date.** `bash scripts/check_skills.sh` compares the installed plugin version
    against the latest on [`api-blitz/skills`](https://github.com/api-blitz/skills). Queue the update
@@ -66,9 +67,11 @@ the MCP is unavailable — prefer the live MCP every time.
 
 ## Rules
 
-- MCP first, and push for it. The MCP is the source of truth; only fall back to the snapshot
-  references if the user declines, and say so (lower confidence) in the report.
+- MCP first. Recommend it when it's missing; it's the source of truth, so only fall back to the
+  snapshot references if the user declines, and say so (lower confidence) in the report.
 - Diagnose, don't spend. `key_info` only — never run a search or enrichment to test during a review.
+  That includes the MCP's API tools (`people_*`, `company_*`, `job_*`), which spend credits; use
+  only its `docs_*` tools for lookups.
 - Never modify anything without explicit confirmation — installing the MCP, upgrading the SDK or
   skills, editing code, or changing the key/RPS all wait for a yes.
 - Never print the full API key or write it anywhere; mask it (`sk_…last4`).
