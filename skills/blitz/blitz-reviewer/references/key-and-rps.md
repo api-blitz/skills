@@ -72,6 +72,6 @@ plan change yourself:
 > "This endpoint allows N RPS and you're already configured at N (on its own client). Going faster
 > needs a higher tier — want me to point you to where to upgrade?"
 
-Then redirect to the user's Blitz dashboard / plan settings at https://blitz-api.ai (or the docs,
+Then redirect to the user's Blitz dashboard / plan settings at https://www.blitz-api.ai (or the docs,
 https://docs.blitz-api.ai). Any actual code change to `rate_limit_rps` still goes through the
 confirmation-gated remediation queue like every other fix.

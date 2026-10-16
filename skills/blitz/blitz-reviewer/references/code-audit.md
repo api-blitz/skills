@@ -26,9 +26,11 @@ assume it.
 
 ## 2. Ask the MCP for the authoritative surface
 
-The MCP exposes two tools: **`search_…`** (semantic — best for "how does X work") and
-**`query_docs_filesystem_…`** (a read-only `rg`/`cat`/`jq`/`tree` shell over the docs **and OpenAPI
-specs**). The specs live at `/openapi/api-reference/v2.openapi.json`. Recipes:
+The MCP's docs tools (free — no credits) are **`docs_search`** (semantic — best for "how does X
+work") and **`docs_read`** (a read-only `rg`/`cat`/`jq`/`tree` shell over the docs **and OpenAPI
+specs**). The specs live at `/openapi/api-reference/v2.openapi.json`. An older docs-only Blitz MCP
+connection names the same two tools `search_…` and `query_docs_filesystem_…`; the recipes work on
+either. Recipes:
 
 ```bash
 # Real endpoints (does this method map to a real path?)
@@ -47,8 +49,8 @@ rg -i "software development" /guide/reference/normalization/industries.mdx
 cat /api-reference/people-search/*.mdx
 ```
 
-Use `search_…` first for conceptual questions, then `query_docs_filesystem_…` for exact schema/enum
-checks. Pin a version with the search tool's `version` arg if the project targets one.
+Use `docs_search` first for conceptual questions, then `docs_read` for exact schema/enum checks.
+Pin a version with `docs_search`'s `version` arg if the project targets one.
 
 ## 3. What to flag (judge each call against the MCP answer)
 

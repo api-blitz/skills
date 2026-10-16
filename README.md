@@ -2,7 +2,9 @@
 
 [![skills.sh](https://skills.sh/b/api-blitz/skills)](https://skills.sh/api-blitz/skills)
 
-Agent skills for going to market with [Blitz API](https://blitz-api.ai) — lead-finding scripts, outreach, content, analytics, lifecycle automation, and the engineering that powers them.
+Agent skills for going to market with [Blitz API](https://www.blitz-api.ai) — lead-finding scripts, outreach, content, analytics, lifecycle automation, and the engineering that powers them.
+
+[Website](https://www.blitz-api.ai) · [Docs](https://docs.blitz-api.ai) · [Connect Your AI (MCP)](https://docs.blitz-api.ai/guide/integrations/MCP)
 
 These skills are designed to be small, easy to adapt, and composable. They work with any model. Hack around with them. Make them your own.
 
@@ -92,7 +94,7 @@ See [`CLAUDE.md`](./CLAUDE.md) for the governance rules each bucket follows, and
 
 ### Blitz
 
-Skills that wrap [Blitz API](https://blitz-api.ai) directly — Waterfall ICP cascades, People Search, Company Search, enrichment, and integration recipes.
+Skills that wrap [Blitz API](https://www.blitz-api.ai) directly — Waterfall ICP cascades, People Search, Company Search, enrichment, and integration recipes.
 
 - **[blitz-gtm-brainstorm](./skills/blitz/blitz-gtm-brainstorm/SKILL.md)** — interview a GTM goal into a validated, enum-checked Blitz brief (endpoint choice, ICP filters, enrichment, volume estimate).
 - **[blitz-create-script](./skills/blitz/blitz-create-script/SKILL.md)** — turn a GTM brief into a runnable, install-and-go Blitz SDK script with API-key safety, error handling, and pagination.
