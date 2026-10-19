@@ -181,6 +181,10 @@ When you add a skill:
 3. Link any non-obvious design decisions in `docs/adr/`.
 4. If you deliberately rejected a feature request, document it in `.out-of-scope/`.
 
+## Security
+
+To report a vulnerability, see [`SECURITY.md`](./SECURITY.md). Please don't open a public issue for it.
+
 ## License
 
 Repository: MIT (see [LICENSE](./LICENSE)). The hosted MCP service is operated by BlitzAPI.
