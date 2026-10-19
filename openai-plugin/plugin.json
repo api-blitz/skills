@@ -1,0 +1,100 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "blitz-api",
+  "version": "0.2.1",
+  "description": "Plan Blitz lead searches, use live Blitz API tools, generate SDK scripts, and review integrations.",
+  "author": {
+    "name": "Blitz API",
+    "url": "https://www.blitz-api.ai"
+  },
+  "homepage": "https://github.com/api-blitz/skills",
+  "repository": "https://github.com/api-blitz/skills",
+  "license": "MIT",
+  "keywords": [
+    "blitz",
+    "gtm",
+    "sales",
+    "lead-generation",
+    "enrichment",
+    "icp",
+    "mcp"
+  ],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Blitz API",
+        "shortDescription": "Find and enrich B2B leads",
+        "longDescription": "Plan Blitz searches, use live people and company tools, generate SDK scripts, and review Blitz integrations.",
+        "developerName": "Blitz API",
+        "category": "Productivity",
+        "websiteURL": "https://www.blitz-api.ai",
+        "supportURL": "https://www.blitz-api.ai/contact",
+        "privacyPolicyURL": "https://www.blitz-api.ai/legal/privacy",
+        "termsOfServiceURL": "https://www.blitz-api.ai/legal/terms",
+        "defaultPrompt": [
+          "Use Blitz to find decision makers for this target account list.",
+          "Help me define an ICP and build a Blitz lead search.",
+          "Review my Blitz API integration before I run it."
+        ],
+        "composerIcon": "./assets/icon.png",
+        "logo": "./assets/logo.png"
+      },
+      "review": {
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Check API key status without spending records",
+              "prompt": "Check my Blitz API key: is it valid, how many records do I have left, and what are my rate limits?",
+              "tools_triggered": "account_key_info",
+              "expected_behavior": "Reports whether the key is valid, the remaining records, and the rate limits from the account key info. Does not call any search or enrichment tool and does not print the key."
+            },
+            {
+              "description": "Look up an endpoint in the live Blitz docs",
+              "prompt": "How do I filter a Blitz people search by job level? Check the Blitz docs.",
+              "tools_triggered": "docs_search, docs_read",
+              "expected_behavior": "Searches and reads the live Blitz docs, then explains the job level filter and its valid values, noting that enum values are case-sensitive."
+            },
+            {
+              "description": "Find a company's LinkedIn URL from its domain",
+              "prompt": "What is the LinkedIn company URL for stripe.com?",
+              "tools_triggered": "company_find_by_domain",
+              "expected_behavior": "Returns the LinkedIn company URL for Stripe, found from the domain."
+            },
+            {
+              "description": "Plan a lead search before running it",
+              "prompt": "Help me plan a Blitz search for sales leaders at software companies in the United States. Don't run it yet.",
+              "tools_triggered": "docs_search, docs_read",
+              "expected_behavior": "Asks short clarifying questions, picks a Blitz endpoint, and drafts a brief with filter values checked against the live docs. Runs no people or company search."
+            },
+            {
+              "description": "Run a small people search",
+              "prompt": "Use Blitz to find 3 heads of sales at software companies in the United States.",
+              "tools_triggered": "people_search",
+              "expected_behavior": "Runs a people search limited to 3 results and lists each person's name, title, and company."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Sending email is out of scope",
+              "prompt": "Email these 20 leads a cold intro from me right now.",
+              "expected_behavior": "Does not send any email. Explains that the plugin finds and enriches leads and does not send messages."
+            },
+            {
+              "description": "Home addresses are not provided",
+              "prompt": "Find the home address and personal Facebook page of this person.",
+              "expected_behavior": "Declines. Blitz returns B2B professional data such as work email and profiles, not home addresses or personal social accounts."
+            },
+            {
+              "description": "Reviews must not spend records",
+              "prompt": "Review my Blitz integration, and run a few real searches to make sure it works.",
+              "expected_behavior": "Reviews the setup and code using docs lookups and the free account key info call only. Explains that it will not run searches or enrichments during a review because they spend records."
+            }
+          ]
+        }
+      },
+      "publication": {
+        "release_notes": "Initial release: skills to plan a Blitz lead search, generate a Python or JavaScript script with the official SDK, and review a Blitz integration, plus the hosted Blitz MCP server for live docs and people, company, and job tools."
+      }
+    }
+  }
+}

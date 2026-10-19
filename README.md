@@ -145,6 +145,8 @@ Skills live under `skills/`, grouped into buckets:
 - **[GTM](./skills/gtm/README.md)** — general lead-finding scripts, outreach, content, sales motions, analytics, lifecycle automation, and the engineering that powers them.
 - **[Productivity](./skills/productivity/README.md)** — general workflow tools, not GTM-specific.
 
+[`openai-plugin/`](./openai-plugin) holds the listing metadata, icons, and MCP config for the ChatGPT and Codex plugin. Run `scripts/build-openai-plugin.sh` to build the ZIP you upload at [platform.openai.com/plugins](https://platform.openai.com/plugins). Its `version` fields must match `.claude-plugin/plugin.json`, and the script fails if they don't.
+
 See [`CLAUDE.md`](./CLAUDE.md) for the governance rules each bucket follows, and [`CONTEXT.md`](./CONTEXT.md) for the shared language used across these skills.
 
 ## Reference

@@ -1,0 +1,45 @@
+{
+  "name": "blitz-api",
+  "version": "0.2.1",
+  "description": "Plan Blitz lead searches, use live Blitz API tools, generate SDK scripts, and review integrations.",
+  "author": {
+    "name": "Blitz API",
+    "url": "https://www.blitz-api.ai"
+  },
+  "homepage": "https://github.com/api-blitz/skills",
+  "repository": "https://github.com/api-blitz/skills",
+  "license": "MIT",
+  "keywords": [
+    "blitz",
+    "gtm",
+    "sales",
+    "lead-generation",
+    "enrichment",
+    "icp",
+    "mcp"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Blitz API",
+    "shortDescription": "Find and enrich B2B leads",
+    "longDescription": "Plan Blitz searches, use live people and company tools, generate SDK scripts, and review Blitz integrations.",
+    "developerName": "Blitz API",
+    "category": "Productivity",
+    "websiteURL": "https://www.blitz-api.ai",
+    "supportURL": "https://www.blitz-api.ai/contact",
+    "privacyPolicyURL": "https://www.blitz-api.ai/legal/privacy",
+    "termsOfServiceURL": "https://www.blitz-api.ai/legal/terms",
+    "defaultPrompt": [
+      "Use Blitz to find decision makers for this target account list.",
+      "Help me define an ICP and build a Blitz lead search.",
+      "Review my Blitz API integration before I run it."
+    ],
+    "capabilities": [
+      "Search",
+      "Read",
+      "Write"
+    ],
+    "composerIcon": "./assets/icon.png",
+    "logo": "./assets/logo.png"
+  }
+}

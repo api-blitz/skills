@@ -5,6 +5,11 @@
   "author": { "name": "Blitz API", "url": "https://www.blitz-api.ai" },
   "homepage": "https://github.com/api-blitz/skills",
   "repository": "https://github.com/api-blitz/skills",
+  "icon": "./.claude-plugin/icon.png",
+  "documentationUrl": "https://docs.blitz-api.ai",
+  "supportUrl": "https://www.blitz-api.ai/contact",
+  "privacyPolicyUrl": "https://www.blitz-api.ai/legal/privacy",
+  "termsOfServiceUrl": "https://www.blitz-api.ai/legal/terms",
   "license": "MIT",
   "keywords": ["blitz", "blitz-api", "gtm", "sales", "lead-generation", "enrichment", "icp", "mcp"],
   "skills": [
