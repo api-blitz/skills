@@ -1,26 +1,25 @@
 #!/usr/bin/env bash
 # Pull Blitz's canonical, case-sensitive enum values LIVE from the OpenAPI spec, and search them
-# without dumping the whole list (the `industry` enum alone is 534 values — a context bomb).
+# without dumping the whole list (the `industry` enum alone is 535 values — a context bomb).
 #
 # This mirrors how the official Blitz JS SDK generates its enums
 # (https://github.com/api-blitz/blitz-api-js/blob/main/scripts/gen-enums.ts): it reads the live
-# spec at /openapi, walks it, maps each `type:"string"` + `enum` array to a class by its owning
-# request property, collapses the 6-12 identical occurrences, de-dupes values (order preserved),
-# and emits a structured JSON artifact. Same guardrails as the SDK: it ERRORS on a divergent or
-# missing enum (an upstream restructure a human should look at) and WARNS on unmapped ones.
+# spec at /openapi, walks the REQUEST BODIES (response schemas such as the /changelog `type` enum
+# are skipped — they share property names with request filters and would look like a divergent
+# enum), maps each `type:"string"` + `enum` array to a class by its owning request property,
+# collapses the 6-12 identical occurrences, de-dupes values (order preserved), and emits a
+# structured JSON artifact. Same guardrails as the SDK: it ERRORS on a divergent or missing enum
+# (an upstream restructure a human should look at) and WARNS on unmapped ones.
 #
-# Why pull live every time: these values silently return 0 results on any case mismatch
-# ("SaaS" != "Software Development"), and the dataset changes — never trust a hardcoded snapshot.
-# A committed references/enums.json is kept ONLY as an offline fallback and may be stale.
-#
-# Two coverage caveats these enums share (they are *precision knobs*, not the search backbone):
-#   - A typo is a hard 0 (case-sensitive, exact-match).
-#   - A correctly-spelled value only matches records *tagged* with it; many companies have no
-#     industry linked and many people aren't tagged a job_level, so a clean enum filter can
-#     silently return a fraction of the real population. Lead with dense job_title / keywords.
-# Watch near-duplicates — pick the exact one the dataset uses, do not guess:
+# Why pull live every time: these values are case-sensitive and exact-match ("SaaS" != "Software
+# Development"), and the dataset changes. The API rejects an unknown value with a 422 that names the
+# field and suggests the closest value (no records spent); this script lets you get it right before
+# the call. Why enums are precision knobs rather than the search backbone: strategy.md.
+# Watch near-duplicates — pick the exact one the dataset uses:
 #   "Hospital and Health Care" vs "Hospitals and Health Care";
 #   "Airlines and Aviation" vs "Airlines/Aviation"; "E-learning" vs "E-Learning Providers".
+# The spec stores one industry with a backslash-escaped apostrophe (Women\\'s Handbag
+# Manufacturing); the script emits the plain apostrophe, which the API accepts.
 #
 # Needs: curl + jq (jq is already required by probe_volume.sh). fzf is optional — if it's
 # installed and stdout is a terminal, `get` opens an interactive picker; agents get plain lines.
@@ -30,28 +29,29 @@
 #   bash pull_enums.sh search industry "health"   # exact values matching a regex, within one enum
 #   bash pull_enums.sh search "venture"           # search across ALL enums -> "Enum<TAB>value"
 #   bash pull_enums.sh get job_level              # every value of one enum, one per line
-#   bash pull_enums.sh save [path]                # write the full JSON artifact (default: the
-#                                                 #   committed references/enums.json fallback)
+#   bash pull_enums.sh save <path>                # write the full JSON artifact to <path>
 #   bash pull_enums.sh json                       # print the full JSON artifact to stdout
 #
 # Enum names are case-insensitive and accept the request property or the SDK class, e.g.
-#   industry | Industry, type | company_type | CompanyType, employee_range | headcount,
-#   continent, sales_region | region, job_function | function, job_level | level | seniority,
-#   country_code | country.
+#   industry | Industry, type | company_type | CompanyType, employee_range | headcount | size,
+#   continent, sales_region | region, job_function | function, job_level | level,
+#   last_funding_type | funding, mx_provider | provider | mx,
+#   seniority (a JOB POSTING's years-of-experience band — not job_level), employment_type,
+#   work_arrangement, country_code | country.
 #
 # Validating several values in one brief? Fetch once, then point the others at it (skips re-fetch):
 #   bash pull_enums.sh save /tmp/blitz-enums.json
 #   BLITZ_ENUMS_CACHE=/tmp/blitz-enums.json bash pull_enums.sh search industry "fintech"
 set -uo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SPEC_URL="${BLITZ_OPENAPI_URL:-https://api.blitz-api.ai/openapi}"   # override for a staging spec
-FALLBACK="${SCRIPT_DIR}/../references/enums.json"   # committed offline fallback (may be stale)
 FETCH_TIMEOUT=15
 FETCH_RETRIES=3
 
-# country_code is NOT a spec enum — the API takes free ISO 3166-1 alpha-2 codes — so it can't be
-# pulled. This common subset is served (clearly marked static) so every enum shares one search UX.
+# country_code is NOT a spec enum — the API takes free ISO 3166-1 alpha-2 codes, unchecked (a wrong
+# one such as "USA" returns 0, not a 422) — so it can't be pulled. This common subset is served
+# (clearly marked static) so every enum shares one search UX; the full accepted list is the
+# Geography page (/guide/reference/normalization/geography) in the Blitz docs.
 # "WORLD" is the global selector for Waterfall ICP / Employee Finder.
 COUNTRY_CODES='["US","GB","FR","CA","DE","AU","NL","ES","IT","IN","BR","SG","SE","CH","BE","DK","NO","FI","PL","IL","JP","KR","CN","MX","AR","CL","CO","ZA","AE","SA","WORLD"]'
 
@@ -65,21 +65,27 @@ def structural: {
 };
 def prop_to_class: {
   "industry":"Industry","type":"CompanyType","employee_range":"EmployeeRange",
+  "size":"EmployeeRange",
   "continent":"Continent","sales_region":"SalesRegion","job_function":"JobFunction",
-  "job_level":"JobLevel"
+  "job_level":"JobLevel","last_funding_type":"LastFundingType","provider":"MxProvider",
+  "seniority":"Seniority","employment_type":"EmploymentType","work_arrangement":"WorkArrangement"
 };
-def class_order: ["Industry","CompanyType","EmployeeRange","Continent","SalesRegion","JobFunction","JobLevel"];
+def class_order: ["Industry","CompanyType","EmployeeRange","Continent","SalesRegion","JobFunction","JobLevel","LastFundingType","MxProvider","Seniority","EmploymentType","WorkArrangement"];
 # Drop exact-duplicate values, preserving first-seen order (matches the SDK dedupeValues).
 def dedupe: reduce .[] as $x ([]; if any(.[]; . == $x) then . else . + [$x] end);
-# The mapped enum hits: nearest non-structural ancestor key -> class, values de-duped.
+# Collapse a backslash-escaped apostrophe (the spec escapes one in a Women handbag industry) to a plain one.
+def unescape: ([39] | implode) as $a | gsub("\\\\+" + $a; $a);
+# The mapped enum hits: nearest non-structural ancestor key -> class, values de-duped. Request
+# bodies only — a response schema can reuse a property name (the /changelog `type` enum).
 def hits:
   [ paths(objects) as $p
+    | select($p[0]=="paths" and ($p | index("requestBody")) != null)
     | getpath($p) as $v
     | select((($v|type)=="object") and ($v.type=="string")
              and (($v.enum|type)=="array") and (all($v.enum[]; type=="string")))
     | ([ $p[] | select(type=="string") ] | map(select(structural[.] | not)) | last) as $owner
     | { owner: $owner, class: (prop_to_class[$owner] // null),
-        values: ($v.enum | dedupe), path: ($p | map(tostring) | join(".")) } ];
+        values: ($v.enum | map(unescape) | dedupe), path: ($p | map(tostring) | join(".")) } ];
 # Case-insensitive enum-name resolution: request property OR SDK class, punctuation-insensitive.
 def aliases: {
   "industry":"Industry","industries":"Industry",
@@ -88,7 +94,10 @@ def aliases: {
   "continent":"Continent",
   "salesregion":"SalesRegion","region":"SalesRegion",
   "jobfunction":"JobFunction","function":"JobFunction",
-  "joblevel":"JobLevel","level":"JobLevel","seniority":"JobLevel",
+  "joblevel":"JobLevel","level":"JobLevel",
+  "lastfundingtype":"LastFundingType","funding":"LastFundingType",
+  "mxprovider":"MxProvider","provider":"MxProvider","mx":"MxProvider",
+  "employmenttype":"EmploymentType","workarrangement":"WorkArrangement",
   "countrycode":"CountryCode","country":"CountryCode","countries":"CountryCode"
 };
 def resolve($name):
@@ -137,8 +146,7 @@ explain_jq_error() {
   esac
 }
 
-# Produce the artifact JSON to stdout. Live by default; BLITZ_ENUMS_CACHE reuses a saved artifact;
-# on fetch failure, falls back to the committed references/enums.json (warned as possibly stale).
+# Produce the artifact JSON to stdout. Live by default; BLITZ_ENUMS_CACHE reuses a saved artifact.
 build_artifact() {
   # Opt-in reuse of a previously-saved artifact (skips the network for batch validation).
   if [ -n "${BLITZ_ENUMS_CACHE:-}" ] && [ -f "${BLITZ_ENUMS_CACHE}" ]; then
@@ -162,12 +170,7 @@ build_artifact() {
     fi
   fi
 
-  # Live fetch failed — fall back to the committed snapshot.
-  if [ -f "$FALLBACK" ]; then
-    echo "[pull_enums] WARN: could not fetch the live spec from ${SPEC_URL}; using offline fallback ${FALLBACK} (may be STALE — re-verify before any real run)." >&2
-    cat "$FALLBACK"; return 0
-  fi
-  die "Could not fetch the spec (${SPEC_URL}) and no offline fallback at ${FALLBACK}. Re-run when online."
+  die "Could not fetch the spec (${SPEC_URL}). Re-run when online, or read the values on the Blitz docs normalization pages (https://docs.blitz-api.ai/guide/reference/normalization)."
 }
 
 # Print one enum's values, optionally through fzf for interactive humans (agents get plain lines).
@@ -233,7 +236,7 @@ case "$cmd" in
     ;;
 
   save)
-    dest="${2:-$FALLBACK}"
+    dest="${2:-}"; [ -n "$dest" ] || die "usage: pull_enums.sh save <path>"
     art="$(build_artifact)" || exit 1
     printf '%s\n' "$art" > "$dest" || die "could not write $dest"
     echo "[pull_enums] wrote $(printf '%s' "$art" | jq -r '.enums | keys | length') enums to $dest (spec_version=$(printf '%s' "$art" | jq -r '.spec_version'))" >&2

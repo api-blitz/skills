@@ -1,9 +1,8 @@
 # How to think about a Blitz search (strategy)
 
-This is the *judgment* layer behind the mechanics — the way of thinking that turns a goal into a
-search that actually returns the right people at the right volume. It is **direction, not dogma**:
-heuristics to reason with, not rules to obey. Endpoint shapes and enum lists live in the other
-references; this is *how to wield them*. Adapt freely — imagination is the limit.
+The judgment behind the mechanics: how a goal becomes a search that returns the right people at the
+right volume. Endpoint behaviour lives in `endpoint-decision.md`, ceilings and partitioning in
+`volume-and-partition.md`.
 
 ## The first decision is the ICP, not the endpoint
 
@@ -15,8 +14,11 @@ fuzzy, **ask the user** rather than guessing; an over-tight or over-loose ICP wa
 
 There are **two** ways a search underperforms, and only the first is obvious:
 
-1. **Enum typo → hard 0 results.** Case-sensitive values silently return nothing on any mismatch
-   (`"vp"` ≠ `"VP"`). Pull and search them with [../scripts/pull_enums.sh](../scripts/pull_enums.sh).
+1. **A wrong value → a 422, or a hard 0.** Categorical enums are case-sensitive (`"vp"` ≠ `"VP"`)
+   and the API rejects an unknown one with a `422` that names the field and suggests the closest
+   value — loud, and no records spent. `scripts/pull_enums.sh` finds the exact value before you
+   call. **Free-text filters are not checked** — `job_title`, `keywords`, `city`, `country_code`
+   (`"USA"` ≠ `"US"`) — so a typo there runs clean and silently returns 0.
 2. **Correct-but-sparse field → silent recall collapse.** A perfectly-spelled `industry` or
    `job_level` only matches records *tagged* with it — and not every company has an industry
    linked, nor is every person tagged `VP`. So a "clean" search can quietly return a *fraction* of
@@ -35,9 +37,8 @@ tagged records have one), and build the backbone of the search from the dense on
 | `min_connections`, `employee_range` / `employee_count` | company `type`, `revenue`, `web_traffic`, `ad_spend`, `naics`/`sic` |
 
 Rule of thumb: **lead with `job_title` keywords + company `keywords`/description.** Reach for the
-sparse enums only when you *need* the precision and can afford the recall hit — each one you add can
-silently shrink the pool to tagged-only records. **De-noise by reviewing a sample and iterating the
-keywords, not by stacking lossy enum filters.**
+sparse enums when the precision is worth the recall hit — each one you add can silently shrink the
+pool to tagged-only records. **De-noise by reviewing a sample and iterating the keywords.**
 
 ## `job_title` is full-text search — spray it
 
@@ -47,69 +48,23 @@ matches. Within the *true* ICP, cast wide:
 - **Synonym / semantic clusters:** `Head of Sales`, `VP Sales`, `Sales Director`, `CRO`, `Revenue`…
 - **Multilingual** when the geo spans languages: `HR` / `RH` / `DRH` / `Human Resources` /
   `Ressources Humaines`.
-- **Long *and* short forms:** `VP` *and* `Vice President`; `HR` *and* `Human Resources`.
+- **Long *and* short forms:** `VP` *and* `Vice President`; `HR` *and* `Human Resources`. Matching
+  is **whole words, in any order, with no stemming or abbreviation expansion** — `Head Marketing`
+  matches `Marketing Head`, but `VP` does not match `Vice President` and `Demand Gen` does not
+  match `Demand Generation`. Write each form as its own phrase.
 - No-bracket keyword match catches variants like `Co-CEO`, `CEO Office`; `[CEO]` is exact-only.
   Flip `include_linkedin_headline: true` to also match the headline — broader, noisier.
+- Each `include` / `exclude` list takes at most 50 phrases (more is a `422`).
 
-## Probe cheaply, tune to saturation, then pull
+**Fidelity gate:** maximize recall *within the real ICP*. Volume that isn't in the ICP is worse than
+no volume, so every added keyword must describe someone the user would actually contact.
 
-Population size is free to read and expensive to pull — so **never pull just to learn how big it is.**
+## Volume vs precision
 
-1. Fire each candidate query/segment at **`max_results: 1`** and read **`total_results`** (Find
-   People / Company Search) or **`total_pages`** (Employee Finder). `scripts/probe_volume.sh` forces
-   `max_results: 1` for exactly this.
-2. Add title/keyword variants and adjust geo/headcount, re-probing, until the number stops climbing.
-3. **Stop when** any of these is true: `total_results` saturates as you add variants; you've
-   enumerated the known title/geo space; new variants only add off-ICP noise; you've hit the user's
-   target count.
-4. *Then* do the full pull.
-
-**Fidelity gate:** maximize recall *within the real ICP* — never bolt on off-target keywords just to
-inflate the number. Volume that isn't in the ICP is worse than no volume.
-
-## The ~50k ceiling is per-query — partition to get *past* it
-
-Find People / Company Search top out around **50k reachable results per query** (Employee Finder
-~10k per company), and Blitz **silently truncates** beyond that. The move isn't to give up — it's to
-**split the ICP into MECE segments that each sit under the ceiling, run them all, union, and dedupe
-on `linkedin_url`.** Most people under-deliver here by under-splitting and capping themselves at one
-query's worth. Partition on **dense** axes so the split itself doesn't leak:
-
-- **Geography** — `country_code`, then region, then **city** (keyword-matched, very granular).
-- **`employee_range` / `employee_count`** buckets (already MECE).
-- **Keyword / title clusters** — run the HR cluster, the Finance cluster, etc. as separate segments.
-
-**Don't partition on a sparse enum** (`industry`, `job_level`): each segment would leak the untagged
-majority. Full mechanics in [volume-and-partition.md](volume-and-partition.md).
-
-## Enrich last, and only what survives
-
-Enrichment costs credits per call, so spend them only on keepers:
-
-> **search → dedupe on `linkedin_url` → post-hoc ICP cleanup → enrich the survivors.**
-
-Never enrich duplicates or rows you're about to discard. Email is broadly available; **phone is
-US-only** — gate on `country_code == "US"`, and only when the user actually asked for phones.
-
-## Endpoint mindset: volume vs. precision (the model flips)
-
-- **Find People / Company Search — volume, keyword-first.** Everything above applies. Find People
-  returns people across many companies in one call; Company Search returns the companies themselves
-  (same company-filter object) — use it to build an **account list** that feeds the named-account
-  motions. You don't *need* to chain for people-by-ICP; Find People does that directly.
-- **Waterfall ICP — precision, one named account.** A **priority ranking**, not a seniority ladder:
-  tier 1 is the *perfect* contact; lower tiers are looser matches *or a different persona* you'd
-  accept. `max_results: 5` fills top-down through the cascade (5 C-levels if it can, else backfills
-  with Directors). Each hit returns an **`icp`** (which tier matched) and **`ranking`** (relevance
-  in the company) — `icp` is a ready-made **persona signal you can use to tailor outreach copy**
-  (a possibility, not a requirement). Spray FTS title variants *within* each tier; turn
-  `include_headline_search` on only in the noisy fallback tiers. Person data nests under
-  `results[].person`.
-- **Employee Finder — a whole department, or a head-count.** Filters are enum-only
-  (`job_level` / `job_function` / `sales_region`) — **no `job_title` keyword**, so the keyword-recall
-  trick isn't available here. Best for *exporting a full team* or *sizing a company* (read
-  `total_pages`), not for hunting one buyer — for that, switch to Waterfall. Person fields come back
-  flat in `results[]` (not nested).
-
-For a list of named accounts: resolve any bare domains to `company_linkedin_url` via
-**domain-to-linkedin** first, then loop one call per account.
+- **Find People, Company Search and the TAM endpoints are volume motions.** Keyword-first; everything
+  above applies. Company Search and the TAM endpoints build an **account list** that feeds the
+  named-account motions.
+- **Waterfall ICP and Employee Finder are precision motions on one named account.** Waterfall ranks
+  a cascade of title tiers, so spray FTS title variants *within* each tier. Employee Finder exports a
+  whole team or sizes a company with enum-only filters, so the keyword-recall trick is unavailable
+  there.

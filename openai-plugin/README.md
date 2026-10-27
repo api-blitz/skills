@@ -8,7 +8,7 @@ This package brings the Blitz API hosted MCP server and three Blitz workflows to
 - **blitz-create-script** — generates a runnable Python, JavaScript, or TypeScript script using the official Blitz SDK.
 - **blitz-reviewer** — checks a Blitz setup and integration against the connected MCP tools and reports findings before fixes.
 
-The hosted MCP server is `https://api.blitz-api.ai/mcp`. Its OAuth and available tools are managed by Blitz. API searches or enrichment may use Blitz account credits; the reviewer workflow is designed to use read-only checks.
+The hosted MCP server is `https://api.blitz-api.ai/mcp`. Its OAuth and available tools are managed by Blitz. API searches or enrichment use records from your Blitz plan's allowance; the reviewer workflow is designed to use read-only checks.
 
 ## Upload
 

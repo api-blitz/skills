@@ -1,108 +1,95 @@
-# Blitz SDK reference (the surface to generate against)
+# Blitz SDK reference (how to generate against it)
 
-The docs site does **not** document the SDKs, so this file is the surface. Verify the installed
-version with `scripts/verify_sdk.sh`; if the SDK has moved on, confirm method names with
-`help(...)` (Python) or the package's `.d.ts` (JS). Method option keys mirror the REST body 1:1
-(snake_case).
+The SDKs are documented live in the Blitz docs: `/sdks/overview`, `/sdks/python`, `/sdks/typescript`,
+`/sdks/pagination`, `/sdks/rate-limits`. With the Blitz MCP connected, read them there
+(`docs_read` → `cat /sdks/python.mdx`); without it, https://docs.blitz-api.ai/sdks/overview (append
+`.md` for plain text). Read the page for the method you are about to emit and take names from it,
+not from memory.
 
-## Python — `blitz-api-py` (Python 3.10+)
+This file keeps only what stays true across releases: the shape of the surface, and the judgment
+calls. Verify the installed version with `scripts/verify_sdk.sh`, and confirm a name with
+`help(...)` (Python) or the package's `.d.ts` (JS).
 
-Install: `uv add blitz-api-py`  (or `pip install blitz-api-py`)
+## Install and construct
 
 ```python
-from blitz_api import BlitzAPI          # AsyncBlitzAPI for async
-client = BlitzAPI()                     # reads BLITZ_API_KEY; or BlitzAPI(api_key="sk_...")
-# Tuning (the SDK already throttles + retries — keep these unless told otherwise):
-# BlitzAPI(max_retries=3, rate_limit_rps=5.0)   # rate_limit_rps=None to disable
-# Rate limits are per endpoint; the limiter is per client. For a multi-endpoint job under load,
-# use one client per endpoint so each runs at its own RPS (e.g. an email client + a phone client).
+# uv add blitz-api-py   (or pip install blitz-api-py)      # Python 3.10+
+from blitz_api import BlitzAPI            # AsyncBlitzAPI for async
+client = BlitzAPI()                       # reads BLITZ_API_KEY; BlitzAPI(api_key="sk_...") is explicit
+```
+```ts
+// bun add blitz-api-js   (or npm install blitz-api-js)    // Node 20+
+import { BlitzAPI } from "blitz-api-js";  // CJS: const { BlitzAPI } = require("blitz-api-js")
+const client = new BlitzAPI();            // reads BLITZ_API_KEY
 ```
 
-Enums (optional; raw strings also accepted):
-```python
-from blitz_api.types import Industry, JobLevel   # e.g. JobLevel.VP or just "VP"
-```
+## The surface
 
-Methods (kwargs mirror the request body in `endpoint-decision.md`):
-```python
-client.search.people(company={...}, people={...}, max_results=50)
-client.search.companies(company={...}, max_results=50)
-client.search.employee_finder(company_linkedin_url="...", job_level=[...],
-                              job_function=[...], sales_region=[...], max_results=50)
-client.search.waterfall_icp(company_linkedin_url="...", cascade=[...], max_results=5)
-client.enrichment.email(person_linkedin_url="...")     # -> .found, .email
-client.enrichment.phone(person_linkedin_url="...")     # -> .found, .phone  (US only)
-client.enrichment.company(company_linkedin_url="...")  # -> .company
-```
+- Seven namespaces: `account`, `search`, `jobs`, `company`, `enrichment`, `utils`, `changelog`.
+  A method mirrors the REST path: the group is the namespace and the last segment, in snake_case,
+  is the method (`POST /v2/company/tam-by-jobs` → `client.company.tam_by_jobs`), occasionally
+  shortened (`/v2/search/waterfall-icp-keyword` → `client.search.waterfall_icp`).
+- Option keys are the REST body keys, 1:1 and snake_case. Python takes them as kwargs, JS as one
+  options object. The server rejects a key it does not define with a `422`, so use only options
+  from the schema.
+- Enum-backed fields take the typed enum (`from blitz_api.types import Industry, JobLevel`; JS
+  string unions / `INDUSTRY`) **or** a raw string.
+- Every metered response carries `fair_usage` (`records_used`, `records_remaining`, `next_reset_at`,
+  `request_id`, and `rate_limit.remaining_this_second` when present) — read it instead of calling
+  `key_info` between requests.
 
-Pagination (prefer auto):
+## Pagination
+
+List methods return an auto-paginating page. Prefer streaming over a manual cursor loop:
+
 ```python
-# Stream ALL results across pages (Find People, Company Search, Employee Finder):
-for person in client.search.people(company={...}, people={...}):
+for person in client.search.people(company={...}, people={...}).auto_paging_iter(max_items=500):
     ...
-# Bound the total fetched:
-for person in client.search.people(...).auto_paging_iter(max_items=500):
-    ...
-# Manual control:
-page = client.search.people(..., max_results=50)
-page.results        # list on this page
-page.total_results  # population size (Find People / Company Search)
-nxt = page.get_next_page()   # None when exhausted
-# Page-by-page:
-for page in client.search.companies(...).iter_pages():
-    page.total_results, page.results, page.cursor
+page = client.search.people(..., max_results=50)        # manual: page.results, page.total_results
+nxt = page.get_next_page()                              # None when exhausted
 ```
-Waterfall ICP returns a single ranked set (no pagination); each item has `.person`, `.icp`
-(tier matched), `.ranking`.
-
-## TypeScript / JavaScript — `blitz-api-js` (Node 20+; runs under bun)
-
-Install: `bun add blitz-api-js`  (or `npm install blitz-api-js`)
-
 ```ts
-import { BlitzAPI } from "blitz-api-js";          // CJS: const { BlitzAPI } = require("blitz-api-js")
-const client = new BlitzAPI();                    // reads BLITZ_API_KEY
-// const client = new BlitzAPI({ api_key: "sk_...", max_retries: 3, rate_limit_rps: 5, timeout: 30 });
-// Limits are per endpoint and the limiter is per client — give a multi-endpoint job one client per endpoint.
+for await (const person of client.search.people({ company: {...}, people: {...}, max_items: 500 })) { ... }
+const first = await client.search.people({ ..., max_results: 50 });   // first.data, first.response.total_results
+const more = first.has_next_page() ? await first.get_next_page() : null;
 ```
 
-Filters accept string unions (`"Software Development"`, `"VP"`). Optional helpers:
-```ts
-import { INDUSTRY } from "blitz-api-js";           // the full 534-value array
-import type { Industry, CompanyFilter } from "blitz-api-js";
-```
+- `max_results` is the **page size**, not a total. A bare loop streams every match up to the
+  server-side ceiling, and each result returned is a billed record — bound it with `max_items` (a
+  client-side cap, never sent on the wire) or `break`.
+- Which methods paginate: the searches, the job searches and the TAM methods (cursor), and Employee
+  Finder (page number). Waterfall ICP returns one ranked set; enrichment, `utils`, `account` and
+  `changelog` return a single response.
+- `total_results` exists on the people, company and job searches — **not** on the TAM methods.
 
-Methods (options are snake_case, 1:1 with the REST body):
-```ts
-client.search.people({ company: {...}, people: {...}, max_results: 50 })   // PagePromise
-client.search.companies({ company: {...}, max_results: 50 })               // PagePromise
-client.search.employee_finder({ company_linkedin_url: "...", max_results: 50 }) // page-paginated
-client.search.waterfall_icp({ company_linkedin_url: "...", cascade: [...], max_results: 5 }) // single set
-client.enrichment.email({ person_linkedin_url: "..." })    // -> { found, email }
-client.enrichment.phone({ person_linkedin_url: "..." })    // -> { found, phone }  (US only)
-client.enrichment.company({ company_linkedin_url: "..." }) // -> { company }
-```
+## Configuration judgment
 
-Pagination (prefer `for await`):
-```ts
-// Stream ALL results:
-for await (const person of client.search.people({ company: {...}, people: {...} })) { ... }
-// Collect into an array, capped:
-const people = await client.search.people({ ..., max_items: 500 }).collect();
-// First page + totals:
-const first = await client.search.people({ ..., max_results: 50 });
-first.response.total_results;   // population size
-first.data;                     // items on this page
-first.has_next_page();          // boolean
-const next = await first.get_next_page();
-```
-`max_results` = page size (1–50). `max_items` = client-side cap on total fetched.
+- `rate_limit_rps` throttles client-side and defaults to 5. The API limit is **per endpoint** and the
+  SDK keeps one bucket per endpoint path, so one client per process already runs `/enrichment/email`
+  and `/enrichment/phone` each at its own limit. Set `rate_limit_rps` to the key's
+  `max_requests_per_seconds`, read from `account.key_info()` (a number, e.g. `25`). The limiter
+  lives on the client instance, so divide `rate_limit_rps` between workers that share an endpoint
+  (5 workers on a 10 rps key → 2 each); workers on different endpoints don't compete.
+- Keep `max_retries` at its default: `429` and `5xx` are retried with backoff. A read timeout is
+  **not** retried (the server may already have counted the records), so raise the per-call `timeout`.
+- Errors: `401` authentication, `402` allowance reached (carries `fair_usage.next_reset_at`), `404`,
+  `429`, `5xx`, timeouts, connection and response-validation errors each have a class. A `400`/`422`
+  surfaces as the generic status error — `err.body["errors"]` (JS: `err.body.errors`) lists
+  `{field, message}`. **Import the class names from the installed package** — the allowance error
+  has been renamed between releases, so `help(blitz_api)` / the `.d.ts` beats memory.
+
+## Where the SDK types can lag the API
+
+The REST API sometimes accepts a body shape before the SDK's types list it, and the server's `422`
+(`errors[].field`) is the arbiter. Before relying on a newly announced filter, check the live schema
+(the public spec, `curl -s https://api.blitz-api.ai/openapi`; the copy `docs_read` serves under
+`/openapi/` can lag it) and the installed SDK's types, and prefer the shape both agree on. For
+waterfall `cascade[].location`, the list of country codes is the safe form.
 
 ## Account / preflight
-```
-POST /v2/account/key-info  ->  { valid, remaining_credits, max_requests_per_seconds, allowed_apis }
-```
-Python: `client.account.key_info()` · JS: `client.account.key_info()` (mirrors the endpoint). Use
-it as a preflight to fail fast on a bad key, an exhausted plan, or an endpoint the plan lacks.
-`max_requests_per_seconds` is the allowed RPS **per endpoint** — each endpoint has its own ceiling,
-not a shared account pool.
+
+`client.account.key_info()` (`GET /v2/account/key-info`, free) returns `valid`, `id`,
+`records_remaining` (a number, e.g. `5000000`), `next_reset_at`,
+`max_requests_per_seconds` (per endpoint), `allowed_apis` (paths without the `/v2` prefix) and
+`active_plans`. Use it as a preflight: fail fast on a bad key, an exhausted allowance, or an
+endpoint the plan lacks.

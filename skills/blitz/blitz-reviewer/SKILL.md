@@ -1,78 +1,96 @@
 ---
 name: blitz-reviewer
-description: Reviews a Blitz API integration against the live Blitz docs before you run it. Confirms the Blitz MCP is installed (and offers to add it), checks the blitz-api SDK and the Blitz skills are on the latest version, scans your project for wrong SDK methods, malformed request bodies, and case-sensitive enum typos by validating each call against the MCP's OpenAPI specs and normalization pages, and reads your API key's per-endpoint rate limits and credits to flag throughput left on the table. Reports a pass/warn/fail checklist and applies each fix only after you confirm. Use when the user says "review my Blitz integration", "audit my Blitz code", "check my Blitz setup", "is my Blitz usage correct", "preflight my Blitz job", or before running a Blitz job at scale.
+description: Audit a Blitz integration against the live Blitz MCP before it runs, covering MCP, SDK and skill versions, call bodies and enums, and key limits. Use when the user asks to review, audit or preflight Blitz code or setup, especially before a run at scale.
 ---
 
 # Blitz Reviewer
 
-Audit a Blitz integration and report what's healthy, what's stale, and what's wrong — across the
-**environment** (MCP, SDK, skills, API key) and the **user's own code** (methods, bodies, enums).
+Audit a Blitz integration across the **environment** (MCP, SDK, skills, API key) and the **user's
+own code** (methods, bodies, enums). Output: one pass/warn/fail checklist, then a remediation queue
+where each fix waits for the user's yes.
 
-**The Blitz MCP is the source of truth.** Never judge a call against a memorized or bundled API
-spec — ask the MCP for the live endpoint, request body, and enum values and compare. That's why the
-MCP is checked first: it makes every other check accurate. Output is a
-pass/warn/fail checklist; nothing changes until the user confirms each fix.
+**Source of truth: the live schema.** Judge every call against what Blitz serves now — the MCP
+tool's own input schema (already in your tool list), the public OpenAPI
+(`curl -s https://api.blitz-api.ai/openapi`, no key) and `util_changelog`, the newest word. The copy
+of the OpenAPI that `docs_read` serves under `/openapi/` can lag these, so read a disagreement with
+them as docs lag. The MCP is checked first because it supplies the tool schemas and the changelog.
 
-This is diagnosis, not a refactor. Run the read-only checks, collect findings into one report, then
-work a remediation queue one confirmed fix at a time. Spend no credits doing it — `key-info` is
-free; never fire a search or enrichment to "test."
+Run the read-only checks, collect findings into one report, then work the remediation queue one
+confirmed fix at a time.
 
 ## Quick start
 
-Work the checks in order (MCP first — it's what makes checks 4–6 authoritative). Collect every
-finding, then present one checklist and a confirmation-gated remediation queue.
+Work the checks in order, collect every finding, then present one checklist and a
+confirmation-gated remediation queue. The report looks like this (full format in
+[references/checklist.md](references/checklist.md)):
+
+```
+Blitz Reviewer — my-project
+  ✓ 1 MCP installed
+  ✗ 5 wrong body key — src/leads.py:42 uses `jobLevel` (use `job_level`)
+  ⚠ 7 RPS throttled — rate_limit_rps left at the default 5; the key allows 10 per endpoint
+Summary: 1 pass · 1 warn · 1 fail
+```
 
 `scripts/` and `references/` paths are relative to this skill's own directory — run helpers from
-there (e.g. `bash <skill-dir>/scripts/check_mcp.sh`). The sibling-skill references
-(`../blitz-create-script/...`, `../blitz-gtm-brainstorm/...`) are a **snapshot fallback** for when
-the MCP is unavailable — prefer the live MCP every time.
+there (e.g. `bash <skill-dir>/scripts/check_mcp.sh`). Without the MCP, the public OpenAPI and docs
+(https://api.blitz-api.ai/openapi, https://docs.blitz-api.ai) still cover bodies and enums at lower
+confidence, and the report says so.
 
 ## Workflow
 
-1. **MCP (check first).** Decide whether the Blitz MCP is connected: check whether you (whichever
-   agent you are) expose its tools (`docs_search`, `docs_read`, and the `people_*` / `company_*` /
-   `job_*` API tools); if unclear, run `bash scripts/check_mcp.sh`. **If it's missing, recommend
-   installing it before you continue** — it's what lets checks 4–6 validate against the live
-   schema. Give the steps for *their* agent (Claude Code, Cursor, VS Code, Windsurf, Codex,
-   claude.ai, …), link https://docs.blitz-api.ai/guide/integrations/MCP, and offer to add it. If the
-   user declines, fall back to the snapshot references and **flag the degraded confidence**. See
+1. **MCP (check first).** See whether your own tools include the Blitz MCP (`docs_search`,
+   `docs_read`, and the `people_*` / `company_*` / `job_*` API tools); if unclear, run
+   `bash scripts/check_mcp.sh`. When it's missing, recommend installing it before you continue,
+   because it supplies the live tool schemas and changelog for checks 4–6. Give the steps for
+   *their* agent (Claude Code, Cursor, VS Code, Windsurf, Codex, claude.ai, …), link
+   https://docs.blitz-api.ai/guide/integrations/MCP, and offer to add it. If the user declines,
+   continue on the public sources and **flag the degraded confidence**. See
    [references/mcp-setup.md](references/mcp-setup.md).
+
+   Done when check 1 has a verdict: connected (✓), declined (⚠) or missing (✗).
 
 2. **Skills up to date.** `bash scripts/check_skills.sh` compares the installed plugin version
    against the latest on [`api-blitz/skills`](https://github.com/api-blitz/skills). Queue the update
    if behind; offline → warn and move on.
 
+   Done when check 2 has a verdict.
+
 3. **SDK up to date.** `bash scripts/check_sdk.sh <python|javascript>` reports installed vs latest
-   (PyPI `blitz-api-py` / npm `blitz-api-js`). Queue an upgrade/install if outdated or missing —
-   never fall back to raw HTTP.
+   (PyPI `blitz-api-py` / npm `blitz-api-js`). Queue an upgrade or install if outdated or missing;
+   the SDK stays the client.
 
-4. **Scan the code, then validate each call against the MCP.** Grep the project for Blitz call
-   sites (imports, `client.search.*` / `.enrichment.*` / `.account.*`, and raw-HTTP to
-   `api.blitz-api.ai`). For each one, **ask the MCP** for the authoritative endpoint, request-body
-   schema, and enum values, and compare — flag unknown/renamed methods, wrong or camelCase body
-   keys, miscased enums (case-sensitive — a typo runs clean and returns nothing), and anti-patterns.
-   Query recipes and the grep patterns: [references/code-audit.md](references/code-audit.md).
+   Done when check 3 has a verdict.
 
-5. **API key, RPS & credits.** Read key health via the SDK (`client.account.key_info()`) or
-   `BLITZ_API_KEY=… bash scripts/check_key.sh`. Report `valid`, `remaining_credits`,
-   `max_requests_per_seconds`, and `allowed_apis`. Limits are **per endpoint**, not a shared account
-   pool: flag both a `rate_limit_rps` set **below** an endpoint's allowed RPS *and* a single shared
-   client throttling several endpoints that are called *concurrently* (give each its own client; a
-   sequential loop gains nothing from the split). Ask before requesting any tier change. See
-   [references/key-and-rps.md](references/key-and-rps.md).
+4. **Scan the code, then validate each call against the live schema.** Grep the project for Blitz
+   call sites (patterns in [references/code-audit.md](references/code-audit.md)). Compare each one
+   with the live endpoint, request-body schema and enum values, and flag unknown or renamed
+   methods, wrong or camelCase body keys, miscased enums, typo'd free-text filters such as
+   `country_code: "USA"` (these run clean and return nothing), and anti-patterns. Removed and
+   renamed names to recognise in old code:
+   [references/migration-notes.md](references/migration-notes.md).
+
+   Done when every call site the grep found has a verdict and a `file:line`.
+
+5. **API key, RPS & records.** Read key health via the SDK (`client.account.key_info()`) or
+   `BLITZ_API_KEY=… bash scripts/check_key.sh`. Report `valid`, `records_remaining`,
+   `next_reset_at`, `max_requests_per_seconds` and `allowed_apis`, and compare the code's
+   `rate_limit_rps` with the key's allowed RPS (rules in
+   [references/key-and-rps.md](references/key-and-rps.md)). Ask before requesting any tier change.
+
+   Done when those five fields are reported and `rate_limit_rps` is compared.
 
 6. **Report & remediate.** Present the pass/warn/fail checklist (format in
    [references/checklist.md](references/checklist.md)), then work the remediation queue top to
-   bottom — apply each fix only after the user confirms it.
+   bottom, applying each fix after the user confirms it.
+
+   Done when every queued fix is applied, declined or deferred.
 
 ## Rules
 
-- MCP first. Recommend it when it's missing; it's the source of truth, so only fall back to the
-  snapshot references if the user declines, and say so (lower confidence) in the report.
-- Diagnose, don't spend. `key_info` only — never run a search or enrichment to test during a review.
-  That includes the MCP's API tools (`people_*`, `company_*`, `job_*`), which spend credits; use
-  only its `docs_*` tools for lookups.
-- Never modify anything without explicit confirmation — installing the MCP, upgrading the SDK or
-  skills, editing code, or changing the key/RPS all wait for a yes.
-- Never print the full API key or write it anywhere; mask it (`sk_…last4`).
-- Enforce the SDK. Flag raw `fetch`/`requests` against `api.blitz-api.ai` as a finding, not a nit.
+- Spend no records. `key_info` is free, as are the `docs_*` tools and the tool schemas; the API
+  tools (`people_*`, `company_*`, `job_*`) and any search or enrichment bill records, so a review
+  leaves them uncalled.
+- Every change waits for explicit confirmation: installing the MCP, upgrading the SDK or skills,
+  editing code, changing the key or RPS.
+- Mask the API key (`sk_…last4`) wherever it appears, and keep it out of files.
