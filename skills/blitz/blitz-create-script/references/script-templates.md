@@ -5,10 +5,9 @@ The SDK auto-paginates and rate-limits, so there is **no cursor loop** — itera
 directly. Pick **single-population** unless `volume.exceeds_ceiling: true`, then use
 **partitioned**.
 
-**Credit discipline:** collect → dedupe on `linkedin_url` → enrich the survivors. The
-single-population template enriches inline only because a single population has no duplicates; the
-partitioned template must dedupe *before* enriching (shown below). Either way, enrich only rows
-you'll keep — see [error-handling.md](error-handling.md).
+**Record discipline:** collect → dedupe on `linkedin_url` → enrich the survivors
+(`error-handling.md` → Enrichment order). The single-population template enriches inline because a
+single population has no duplicates; the partitioned template dedupes first, as shown below.
 
 ## Python — single population (Find People → enrich → CSV)
 
@@ -18,10 +17,15 @@ from blitz_api import BlitzAPI
 
 client = BlitzAPI()  # reads BLITZ_API_KEY from env (.env)
 
-# Preflight: fail fast on a bad key / exhausted plan / missing endpoint.
+# Preflight: fail fast on a bad key / exhausted allowance, then use the plan's full per-endpoint RPS.
 info = client.account.key_info()
 if not getattr(info, "valid", False):
     sys.exit("Invalid API key — set BLITZ_API_KEY in .env")
+if info.records_remaining == 0:   # a number, e.g. 5000000
+    sys.exit(f"No records left until {info.next_reset_at} — upgrade the plan or wait for the reset")
+rps = info.max_requests_per_seconds
+if isinstance(rps, (int, float)) and rps > 5:
+    client = BlitzAPI(rate_limit_rps=float(rps))   # default is 5 (sdk-reference.md → Configuration judgment)
 
 rows = []
 # Filters come straight from the brief. SDK streams ALL pages.
@@ -72,8 +76,8 @@ for seg in SEGMENTS:
         seen[person.linkedin_url] = person      # dedupe key = linkedin_url
 people = list(seen.values())   # deduped survivors
 print(f"Collected {len(people)} unique people across {len(SEGMENTS)} segments")
-# Enrich the deduped list in a SEPARATE pass (never inside the segment loop above — that
-# re-enriches duplicates and burns credits), then write CSV as in the single-population template:
+# Enrich the deduped list in a SEPARATE pass after the segment loop, so each person is enriched
+# once, then write CSV as in the single-population template:
 #   for person in people:
 #       email = client.enrichment.email(person_linkedin_url=person.linkedin_url)
 #       ...
@@ -84,7 +88,7 @@ print(f"Collected {len(people)} unique people across {len(SEGMENTS)} segments")
 The block below is **TypeScript** — save as `script.ts` and run under a TS runtime: `bun run
 script.ts`, or `npx tsx script.ts` without bun (bare `node script.ts` won't strip the types).
 
-For a **`javascript`** brief, respect that choice: save the same code as `script.mjs`, drop the
+For a **`javascript`** brief, save the same code as `script.mjs`, drop the
 three type annotations (`: Record<string, string>[]`, `(v: unknown)`, `new Map<string, any>()` →
 `[]`, `(v)`, `new Map()`), keep the ESM `import`s, and run `node script.mjs` (the `.mjs` extension
 is ESM with no `package.json` `"type"` needed) or `bun run script.mjs`.
@@ -93,10 +97,14 @@ is ESM with no `package.json` `"type"` needed) or `bun run script.mjs`.
 import { BlitzAPI } from "blitz-api-js";
 import { writeFileSync } from "node:fs";
 
-const client = new BlitzAPI(); // reads BLITZ_API_KEY
+let client = new BlitzAPI(); // reads BLITZ_API_KEY
 
+// Preflight: fail fast on a bad key / exhausted allowance, then use the plan's full per-endpoint RPS.
 const info = await client.account.key_info();
 if (!info.valid) { console.error("Invalid API key — set BLITZ_API_KEY"); process.exit(1); }
+if (info.records_remaining === 0) { console.error(`No records left until ${info.next_reset_at}`); process.exit(1); } // a number, e.g. 5000000
+const rps = info.max_requests_per_seconds;
+if (typeof rps === "number" && rps > 5) client = new BlitzAPI({ rate_limit_rps: rps }); // default is 5 (sdk-reference.md → Configuration judgment)
 
 const cols = ["first_name", "last_name", "headline", "linkedin_url", "email", "phone", "country"];
 const rows: Record<string, string>[] = [];
@@ -148,8 +156,8 @@ for (const seg of SEGMENTS) {
 }
 const people = [...seen.values()];   // deduped survivors
 console.log(`Collected ${people.length} unique people across ${SEGMENTS.length} segments`);
-// Enrich the deduped list in a SEPARATE pass (never inside the segment loop above — that
-// re-enriches duplicates and burns credits), then write CSV as in the single-population template.
+// Enrich the deduped list in a SEPARATE pass after the segment loop, so each person is enriched
+// once, then write CSV as in the single-population template.
 ```
 
 ## Adapting per endpoint
@@ -159,9 +167,16 @@ console.log(`Collected ${people.length} unique people across ${SEGMENTS.length} 
   page-paginated; SDK still streams via `for ...`/`for await`.
 - **Waterfall ICP** → `client.search.waterfall_icp({ company_linkedin_url, cascade, max_results })`;
   iterate a list of accounts, one call each; each result item exposes `.person`, `.icp`, `.ranking`.
+- **Job Search** → `client.jobs.search({ job, company })` (market) or
+  `client.jobs.company({ company_linkedin_url, job })` (one company); rows are postings.
+- **TAM by Jobs / TAM by People** → `client.company.tam_by_jobs({ job, company })` /
+  `client.company.tam_by_people({ company, people })`; rows are `match.company` plus
+  `matched_jobs` / `matched_people`. No `total_results` — iterate to the end (`min_per_company` can
+  make a page short). The output is an account list that usually feeds Waterfall ICP or Employee
+  Finder, one call per account.
+- **Job Search and TAM by Jobs nest filters differently from people/company search:**
+  `company.hq.country_code` and `job.location.country_code` are `{include: [...], exclude: [...]}`
+  objects, and `company.size` is `{include: [...]}` (the employee-range bands).
 - **JSON output** → collect `rows`/`people` and `json.dump` / `JSON.stringify` instead of CSV.
-- Enriching every record makes one paid API call per record; the SDK throttles to `rate_limit_rps`
-  per client. Rate limits are per endpoint, so when you enrich both `/email` and `/phone`, a separate
-  client per endpoint lets each run at its own RPS concurrently instead of sharing one budget. Dedupe
-  on `linkedin_url` and apply any ICP cleanup *before* enriching, and on very large runs enrich only
-  what you'll actually contact (cap with `max_items` / `auto_paging_iter`).
+- On very large runs enrich only what you will actually contact; cap the pull with `max_items` /
+  `auto_paging_iter`.

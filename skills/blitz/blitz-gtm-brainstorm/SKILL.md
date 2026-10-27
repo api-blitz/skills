@@ -1,69 +1,98 @@
 ---
 name: blitz-gtm-brainstorm
-description: Interviews the user about a go-to-market goal and produces a validated GTM brief covering the motion, the Blitz endpoint choice (Find People, Waterfall ICP, Company Search, or Employee Finder), an ICP/account definition with case-sensitive enum-validated filters, an enrichment plan (email/phone), an output target, the language, and a volume estimate. Use when the user wants to find leads, build a prospect or account list, define an ICP, plan outreach sourcing, or scope a Blitz API search before writing code, or says "who should I target", "build me a lead list", or "plan a GTM motion". Produces gtm-brief.yaml and hands off to blitz-create-script.
+description: Scope a Blitz API search into a validated gtm-brief.yaml (endpoint, ICP filters, enrichment, volume). Use when the user wants a lead list, a target-account or hiring-signal list, an ICP definition, or a plan before writing Blitz code.
 ---
 
 # Blitz GTM Brainstorm
 
-Turn a fuzzy GTM goal into a precise, validated **GTM brief** (`gtm-brief.yaml`) that
-`blitz-create-script` compiles into a runnable script with no silent failures. Blitz returns
-verified B2B decision-makers from a 380M+ LinkedIn-based dataset; the brief is the spec.
+Turn a fuzzy GTM goal into a validated **GTM brief** (`gtm-brief.yaml`), the spec that
+`blitz-create-script` compiles into a runnable script. Blitz returns verified B2B people,
+companies and job postings.
 
 ## Quick start
 
-Ask the user for their goal in one sentence ("reach Heads of Sales at US Series-B SaaS"), then
-work the steps below and output `gtm-brief.yaml`. Do not write code here — that is
-`blitz-create-script`'s job.
+Ask for the goal in one sentence ("reach Heads of Sales at US Series-B SaaS"), work the steps
+below, and emit the brief; code belongs to `blitz-create-script`. A brief excerpt (full schema in
+[references/gtm-brief-schema.md](references/gtm-brief-schema.md)):
+
+```yaml
+goal: "Reach Heads of Sales at US SaaS companies"
+endpoint: find-people
+account: { keywords_include: ["SaaS"], employee_range: ["51-200", "201-500"] }
+people: { job_title_include: ["Head of Sales", "VP Sales"], location_country_code: ["US"] }
+volume: { estimate: 18342, exceeds_ceiling: false }
+enums_verified: true
+```
 
 `scripts/` and `references/` paths below are relative to this skill's own directory — run the
 helpers from there (e.g. `bash <skill-dir>/scripts/pull_enums.sh list`), not the user's project root.
 
 ## Workflow
 
-1. **Pick the motion and the endpoint.** Map the goal to exactly one endpoint. Details and
-   request shapes: [references/endpoint-decision.md](references/endpoint-decision.md).
-   - Many companies, by ICP → **Find People** (`/v2/search/people`)
-   - One named account, best decision-maker → **Waterfall ICP** (`/v2/search/waterfall-icp-keyword`)
-   - Every person at one company → **Employee Finder** (`/v2/search/employee-finder`)
-   - Companies, not people → **Company Search** (`/v2/search/companies`)
+1. **Pick the endpoint.** Match the user's starting point to exactly one endpoint; the table, the
+   per-endpoint notes and the chaining advice are in
+   [references/endpoint-decision.md](references/endpoint-decision.md).
+   - An ICP, people across many companies → **Find People**
+   - A named account, its best decision-maker → **Waterfall ICP**
+   - A named account, every matching employee → **Employee Finder**
+   - Companies rather than people → **Company Search**
+   - Accounts from a signal → **TAM by People** (who already works there) or **TAM by Jobs** (who is hiring)
+   - The postings themselves → **Job Search** (`/v2/jobs/company` for one company)
 
-2. **Draft the filters — recall-first.** Read [references/strategy.md](references/strategy.md)
-   first, then build the backbone from the **dense** fields nearly every record has: `job_title`
-   (full-text — spray synonyms, long/short forms, multilingual variants), company `keywords`
-   (searches the description), city, headcount, `min_connections`. Add the **sparse** enums
-   (`industry`, `job_level`, `job_function`, `type`, `revenue`) only as precision knobs — each can
-   silently shrink the result to tagged-only records. Only fill the keys the chosen endpoint uses.
+   Done when `endpoint` is set and the user's starting point (ICP, named account, or signal)
+   explains the choice.
 
-3. **Validate every enum you *do* use — live.** Case-sensitive enums silently return 0 results on
-   any typo (`"SaaS"` ≠ `"Software Development"`). For each `industry` / `job_level` /
-   `job_function` / `employee_range` / `sales_region` / `country_code` / `type` value in the brief,
-   confirm an EXACT match with `bash scripts/pull_enums.sh search <enum> "<value>"` (e.g.
-   `search industry "health"`; `list` shows all enums, `get <enum>` dumps the small ones). Fix any
-   miss with the user. The script pulls live from the Blitz OpenAPI spec — the same source the SDK
-   generates its enums from; if offline it falls back to the committed
-   [references/enums.json](references/enums.json) (may be stale — re-verify). Set
-   `enums_verified: true` once the enums you use all match (a keyword-only search that uses no enums
-   is trivially verified). This guards typos — it is **not** a nudge to lean on enums; prefer the
-   keyword backbone from step 2.
+2. **Draft the filters, recall-first.** Read [references/strategy.md](references/strategy.md), then
+   build the backbone from the **dense** fields nearly every record has: `job_title` (full-text, so
+   spray synonyms, long and short forms, multilingual variants), company `keywords` (searches the
+   description), city, headcount, `min_connections`. Add **sparse** enums (`industry`,
+   `job_level`, `job_function`, `type`, `revenue`) as precision knobs, because each one can shrink
+   the result to tagged-only records. Fill only the keys the chosen endpoint uses.
+
+   Done when every filter belongs to the chosen endpoint and every sparse enum has a stated
+   precision reason.
+
+3. **Verify every enum value, live.** Enums are case-sensitive and exact-match (`"SaaS"` ≠
+   `"Software Development"`). For each `industry` / `job_level` / `job_function` /
+   `employee_range` / `sales_region` / `type` / `last_funding_type` / `mx.provider` value (and, on
+   the job endpoints, `seniority` / `employment_type` / `work_arrangement`), run
+   `bash scripts/pull_enums.sh search <enum> "<value>"` until the output shows an EXACT match, and
+   resolve any miss with the user. `list` shows every enum and `get <enum>` dumps the small ones.
+   Free-text filters (`country_code`, `job_title`, `keywords`, `city`) have no list to check
+   against, so write `country_code` as ISO alpha-2 (`US`).
+
+   Done when every enum value in the brief matches exactly; set `enums_verified: true` (a
+   keyword-only brief uses no enums and counts as verified).
 
 4. **Probe volume, decide partitioning.** Run
-   `echo '<request-json>' | BLITZ_API_KEY=... bash scripts/probe_volume.sh /v2/search/people`
-   to read `total_results` (Find People / Company Search) or `total_pages` (Employee Finder). If
-   the population exceeds the reachable ceiling (~50k people/companies, ~10k per company), set
-   `volume.exceeds_ceiling: true` and a `partition_plan`. See
-   [references/volume-and-partition.md](references/volume-and-partition.md).
+   `echo '<request-json>' | BLITZ_API_KEY=... bash scripts/probe_volume.sh /v2/search/people` and
+   read `total_results` (Find People, Company Search, job searches) or `total_pages` (Employee
+   Finder). Re-probe as you add title/keyword variants until the count saturates or reaches the
+   user's target. Past the reachable ceiling (~50k people or companies, ~10k per company, ~5k
+   jobs) set `volume.exceeds_ceiling: true` and a `partition_plan`. The TAM endpoints return no
+   total, so page their cursor to size them (`probe_method: manual`). Each probe spends one
+   record. Mechanics: [references/volume-and-partition.md](references/volume-and-partition.md).
 
-5. **Enrichment, output, language.** `email` (any leads plan), `phone` (US-only — warn if the
-   targets are not US), reverse lookups. Output: `csv` / `json` / `stdout`. Language: `python`,
-   `typescript`, or `javascript` — record the user's choice as-is (don't default a JS user to TS).
+   Done when `volume.estimate` rests on a probe (or `manual` for TAM) and `exceeds_ceiling` is decided.
+
+5. **Enrichment, output, language.** `email` (any plan), `phone` (US-only, paid plans; warn when
+   the targets are outside the US or the key is on the free trial), reverse lookups. Every search
+   result and successful enrichment bills 1 record against the plan's monthly allowance, so size
+   the run against `records_remaining`. Output: `csv` / `json` / `stdout`. Language: `python`,
+   `typescript`, or `javascript`, recorded exactly as the user states it.
+
+   Done when the `enrichment`, `output` and `language` blocks are filled and the user has seen the
+   run's record estimate (search results plus enrichments).
 
 6. **Emit the brief.** Write `gtm-brief.yaml` per
-   [references/gtm-brief-schema.md](references/gtm-brief-schema.md) and offer to save it in the
-   user's working directory. Then tell the user to run **blitz-create-script**.
+   [references/gtm-brief-schema.md](references/gtm-brief-schema.md), offer to save it in the
+   user's working directory, and tell the user to run **blitz-create-script**.
+
+   Done when the brief is written (or shown) and the handoff is stated.
 
 ## Rules
 
-- Never guess an enum value you use. Pull live and match exactly, on every run (the dataset
-  changes) — but prefer the dense keyword backbone, so you depend on enums as little as possible.
-- Never put the API key in the brief. It lives in `BLITZ_API_KEY` / `.env` only.
-- If the user already knows their ICP, skip ahead — but still validate enums (step 3).
+- The references are a working snapshot. Where they disagree with the live schema (the MCP tool's
+  input schema or the public OpenAPI) or with `util_changelog`, the live sources win.
+- The API key lives in `BLITZ_API_KEY` / `.env`, outside the brief.
+- A user who already knows their ICP skips to step 3.

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Read Blitz API key health — valid, remaining credits, allowed per-endpoint RPS, allowed APIs.
-# Rate limits are per endpoint (each endpoint has its own RPS ceiling), not one shared account pool;
-# max_requests_per_seconds is the allowed RPS that applies to each endpoint.
-# This is a FREE call (key-info): it spends no credits. Needs BLITZ_API_KEY in the env, plus
+# Read Blitz API key health — valid, remaining records, next reset, allowed per-endpoint RPS,
+# allowed APIs. Rate limits are per endpoint (each endpoint has its own RPS ceiling), not one
+# shared account pool; max_requests_per_seconds is the allowed RPS that applies to each endpoint.
+# This is a FREE call (key-info): it spends no records. Needs BLITZ_API_KEY in the env, plus
 # curl and jq. The response carries no secret, so its fields are safe to print.
 # Usage: BLITZ_API_KEY=sk_... bash check_key.sh
 set -uo pipefail
@@ -15,7 +15,8 @@ RESP="$(curl -fsS --max-time 15 "https://api.blitz-api.ai/v2/account/key-info" \
 
 echo "$RESP" | jq '{
   valid:                    .valid,
-  remaining_credits:        .remaining_credits,
+  records_remaining:        .records_remaining,
+  next_reset_at:            .next_reset_at,
   max_requests_per_seconds: .max_requests_per_seconds,
   allowed_apis:             .allowed_apis,
   active_plans:             .active_plans
